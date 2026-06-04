@@ -700,7 +700,7 @@ if raw_df is not None:
                         yaxis=dict(range=[0, 110], showgrid=False, showticklabels=False),
                         xaxis=dict(showgrid=False, tickfont=dict(size=10, family="Rajdhani")),
                     )
-                    st.plotly_chart(mini_fig, width="stretch", key=f"mini_{caste}")
+                    st.plotly_chart(mini_fig, width="stretch")
 
             # ── Quick Swing Simulator ─────────────────────────────────────
             st.markdown('<div class="section-header">QUICK SWING SIMULATOR</div>', unsafe_allow_html=True)
@@ -721,59 +721,120 @@ if raw_df is not None:
             # ── Result comparison ─────────────────────────────────────────
             scenario_vs = compute_vote_share(ac_df, scenario_splits)
 
-            st.markdown('<div class="section-header">SCENARIO RESULT vs BASE</div>', unsafe_allow_html=True)
+            # Normalize survey input to 100% for fair comparison
+            surv_total = sum(survey_input.values())
+            if surv_total > 0:
+                survey_norm = {p: round(v * 100 / surv_total, 2) for p, v in survey_input.items()}
+            else:
+                survey_norm = survey_input.copy()
+
+            # ── 3-WAY METRIC CARDS: Base / Scenario / Survey ──────────────
+            st.markdown('<div class="section-header">SCENARIO vs BASE vs SURVEY</div>', unsafe_allow_html=True)
             rcols = st.columns(5)
             for i, party in enumerate(PARTIES):
                 base_val = base_vs.get(party, 0)
                 scen_val = scenario_vs.get(party, 0)
-                delta    = scen_val - base_val
-                delta_class = "delta-pos" if delta > 0 else ("delta-neg" if delta < 0 else "delta-neu")
-                delta_sign  = "+" if delta > 0 else ""
+                surv_val = survey_norm.get(party, 0)
+                delta_base = scen_val - base_val
+                delta_surv = scen_val - surv_val
+                db_class = "delta-pos" if delta_base > 0 else ("delta-neg" if delta_base < 0 else "delta-neu")
+                ds_class = "delta-pos" if delta_surv > 0 else ("delta-neg" if delta_surv < 0 else "delta-neu")
+                db_sign  = "+" if delta_base > 0 else ""
+                ds_sign  = "+" if delta_surv > 0 else ""
                 pcol = PARTY_COLORS[party]
                 with rcols[i]:
                     st.markdown(f"""
                     <div class="metric-card" style="border-left: 4px solid {pcol};">
                       <div class="metric-label">{party}</div>
                       <div class="metric-value" style="color:{pcol}">{scen_val:.1f}%</div>
-                      <div class="metric-delta {delta_class}">{delta_sign}{delta:.1f}% vs base</div>
+                      <div class="metric-delta {db_class}">{db_sign}{delta_base:.1f}% vs base ({base_val:.1f}%)</div>
+                      <div class="metric-delta {ds_class}">{ds_sign}{delta_surv:.1f}% vs survey ({surv_val:.1f}%)</div>
                     </div>""", unsafe_allow_html=True)
 
-            # Winner analysis
+            # ── Winner analysis ───────────────────────────────────────────
             scen_top = max(scenario_vs, key=scenario_vs.get)
             scen_2nd = sorted(scenario_vs, key=scenario_vs.get, reverse=True)[1]
             scen_margin = scenario_vs[scen_top] - scenario_vs[scen_2nd]
             base_top = max(base_vs, key=base_vs.get)
+            surv_top = max(survey_norm, key=survey_norm.get)
 
             if scen_top != base_top:
                 st.markdown(f"""
                 <div class="warn-box">
-                🔄 <b>SEAT FLIP DETECTED!</b> Base scenario winner: <b>{base_top}</b> ({base_vs[base_top]:.1f}%)
+                🔄 <b>SEAT FLIP vs BASE!</b> Base winner: <b>{base_top}</b> ({base_vs[base_top]:.1f}%)
                 → Scenario winner: <b>{scen_top}</b> ({scenario_vs[scen_top]:.1f}%). Margin: {scen_margin:.1f}%.
                 </div>""", unsafe_allow_html=True)
-            else:
+            if scen_top != surv_top:
+                st.markdown(f"""
+                <div class="warn-box">
+                ⚠️ <b>SCENARIO ≠ SURVEY!</b> Survey predicts <b>{surv_top}</b> ({survey_norm[surv_top]:.1f}%)
+                but caste model predicts <b>{scen_top}</b> ({scenario_vs[scen_top]:.1f}%).
+                </div>""", unsafe_allow_html=True)
+            if scen_top == base_top and scen_top == surv_top:
                 st.markdown(f"""
                 <div class="info-box">
-                ✅ <b>{scen_top}</b> remains projected winner. Margin vs {scen_2nd}: <b>{scen_margin:.1f}%</b>.
+                ✅ All three agree: <b>{scen_top}</b> wins. Scenario margin vs {scen_2nd}: <b>{scen_margin:.1f}%</b>.
                 </div>""", unsafe_allow_html=True)
 
+            # ── 3-WAY GROUPED BAR CHART ───────────────────────────────────
+            st.markdown('<div class="section-header">BASE vs SCENARIO vs SURVEY — COMPARISON</div>', unsafe_allow_html=True)
+            fig_comp = go.Figure()
+            for trace_name, trace_data, opacity, pattern in [
+                ("Base (Caste Model)", base_vs, 0.45, None),
+                ("Scenario (Modified)", scenario_vs, 1.0, None),
+                ("Survey (Field Data)", survey_norm, 0.7, dict(shape="/", size=6, solidity=0.3)),
+            ]:
+                fig_comp.add_trace(go.Bar(
+                    x=PARTIES,
+                    y=[trace_data.get(p, 0) for p in PARTIES],
+                    name=trace_name,
+                    marker_color=[PARTY_COLORS[p] for p in PARTIES],
+                    marker_pattern=pattern,
+                    opacity=opacity,
+                    text=[f"{trace_data.get(p, 0):.1f}%" for p in PARTIES],
+                    textposition="outside",
+                    textfont=dict(family="Rajdhani", size=11),
+                ))
+            fig_comp.update_layout(
+                barmode="group",
+                paper_bgcolor="#161b22", plot_bgcolor="#161b22",
+                font=dict(family="IBM Plex Sans", color="#e6edf3"),
+                title=dict(text="Three-Way Vote Share Comparison", font=dict(family="Rajdhani", color="#79c0ff", size=15)),
+                xaxis=dict(showgrid=False, tickfont=dict(family="Rajdhani", size=14)),
+                yaxis=dict(showgrid=True, gridcolor="#30363d", range=[0, 100],
+                           ticksuffix="%", tickfont=dict(family="IBM Plex Mono")),
+                legend=dict(font=dict(family="Rajdhani", size=12), orientation="h",
+                            yanchor="bottom", y=1.02, xanchor="center", x=0.5),
+                margin=dict(t=60, l=0, r=0, b=0),
+                height=340,
+            )
+            st.plotly_chart(fig_comp, width="stretch", key="fig_3way_comp")
+
+            # ── RADAR: Base vs Scenario vs Survey ─────────────────────────
             col_rl, col_rr = st.columns(2)
             with col_rl:
-                # Radar chart
                 cats_radar  = PARTIES
                 base_vals   = [base_vs.get(p, 0) for p in PARTIES]
                 scen_vals   = [scenario_vs.get(p, 0) for p in PARTIES]
+                surv_vals   = [survey_norm.get(p, 0) for p in PARTIES]
                 fig_radar   = go.Figure()
                 fig_radar.add_trace(go.Scatterpolar(
                     r=base_vals + [base_vals[0]],
                     theta=cats_radar + [cats_radar[0]],
                     fill="toself", name="Base",
-                    line=dict(color="#79c0ff"), fillcolor="rgba(121,192,255,0.15)"
+                    line=dict(color="#79c0ff"), fillcolor="rgba(121,192,255,0.10)"
                 ))
                 fig_radar.add_trace(go.Scatterpolar(
                     r=scen_vals + [scen_vals[0]],
                     theta=cats_radar + [cats_radar[0]],
                     fill="toself", name="Scenario",
-                    line=dict(color="#f78166"), fillcolor="rgba(247,129,102,0.15)"
+                    line=dict(color="#f78166"), fillcolor="rgba(247,129,102,0.10)"
+                ))
+                fig_radar.add_trace(go.Scatterpolar(
+                    r=surv_vals + [surv_vals[0]],
+                    theta=cats_radar + [cats_radar[0]],
+                    fill="toself", name="Survey",
+                    line=dict(color="#56d364", dash="dash"), fillcolor="rgba(86,211,100,0.08)"
                 ))
                 fig_radar.update_layout(
                     polar=dict(
@@ -784,34 +845,54 @@ if raw_df is not None:
                     paper_bgcolor="#161b22",
                     font=dict(family="IBM Plex Sans", color="#e6edf3"),
                     legend=dict(font=dict(family="Rajdhani")),
-                    title=dict(text="Base vs Scenario — Radar", font=dict(family="Rajdhani", color="#79c0ff", size=14)),
+                    title=dict(text="Base vs Scenario vs Survey — Radar", font=dict(family="Rajdhani", color="#79c0ff", size=14)),
                     margin=dict(t=40, l=20, r=20, b=20),
-                    height=320,
+                    height=340,
                 )
-                st.plotly_chart(fig_radar, width="stretch")
+                st.plotly_chart(fig_radar, width="stretch", key="fig_radar_3way")
+
             with col_rr:
-                # Delta waterfall
-                delta_data = {p: scenario_vs.get(p, 0) - base_vs.get(p, 0) for p in PARTIES}
-                fig_delta  = go.Figure(go.Bar(
-                    x=list(delta_data.keys()),
-                    y=list(delta_data.values()),
-                    marker_color=["#56d364" if v >= 0 else "#f78166" for v in delta_data.values()],
-                    text=[f"{'+' if v >= 0 else ''}{v:.1f}%" for v in delta_data.values()],
+                # Gap chart: Scenario vs Survey
+                gap_data = {p: scenario_vs.get(p, 0) - survey_norm.get(p, 0) for p in PARTIES}
+                fig_gap  = go.Figure(go.Bar(
+                    x=PARTIES,
+                    y=list(gap_data.values()),
+                    marker_color=["#56d364" if v >= 0 else "#f78166" for v in gap_data.values()],
+                    text=[f"{'+' if v >= 0 else ''}{v:.1f}%" for v in gap_data.values()],
                     textposition="outside",
                     textfont=dict(family="Rajdhani", size=13),
                 ))
-                fig_delta.update_layout(
+                fig_gap.update_layout(
                     paper_bgcolor="#161b22", plot_bgcolor="#161b22",
-                    title=dict(text="Vote Share Delta (Scenario − Base)", font=dict(family="Rajdhani", color="#79c0ff", size=14)),
+                    title=dict(text="Scenario − Survey Gap", font=dict(family="Rajdhani", color="#e3b341", size=14)),
                     font=dict(family="IBM Plex Sans", color="#e6edf3"),
                     yaxis=dict(showgrid=True, gridcolor="#30363d", ticksuffix="%",
                                zeroline=True, zerolinecolor="#8b949e", zerolinewidth=1,
                                tickfont=dict(family="IBM Plex Mono")),
                     xaxis=dict(showgrid=False, tickfont=dict(family="Rajdhani", size=13)),
                     margin=dict(t=40, l=0, r=0, b=0),
-                    height=320,
+                    height=340,
                 )
-                st.plotly_chart(fig_delta, width="stretch")
+                st.plotly_chart(fig_gap, width="stretch", key="fig_gap_surv")
+
+            # ── DETAILED COMPARISON TABLE ─────────────────────────────────
+            st.markdown('<div class="section-header">DETAILED COMPARISON TABLE</div>', unsafe_allow_html=True)
+            comp_rows = []
+            for p in PARTIES:
+                b = base_vs.get(p, 0)
+                s = scenario_vs.get(p, 0)
+                sv = survey_norm.get(p, 0)
+                comp_rows.append({
+                    "Party": p,
+                    "Base %": f"{b:.1f}",
+                    "Scenario %": f"{s:.1f}",
+                    "Survey %": f"{sv:.1f}",
+                    "Scen vs Base": f"{'+' if s-b >= 0 else ''}{s-b:.1f}",
+                    "Scen vs Survey": f"{'+' if s-sv >= 0 else ''}{s-sv:.1f}",
+                    "Survey vs Base": f"{'+' if sv-b >= 0 else ''}{sv-b:.1f}",
+                })
+            comp_df = pd.DataFrame(comp_rows)
+            st.dataframe(comp_df, width="stretch", hide_index=True, key="tbl_3way")
 
         # ══════════════════════════════════════════════════════════════════
         # TAB 3 — IMPACT ANALYSIS
