@@ -323,6 +323,55 @@ def normalize_split(split_dict: dict) -> dict:
         return split_dict
     return {k: round(v * 100 / s, 2) for k, v in split_dict.items()}
 
+def _init_store():
+    """Ensure the global store exists."""
+    if "ac_data_store" not in st.session_state:
+        st.session_state["ac_data_store"] = {}
+ 
+def store_has_ac(ac_name, table):
+    """Return True if saved data exists for this AC + table ('vs22' or 'capi')."""
+    _init_store()
+    return (ac_name in st.session_state["ac_data_store"]
+            and table in st.session_state["ac_data_store"][ac_name]
+            and len(st.session_state["ac_data_store"][ac_name][table]) > 0)
+ 
+def load_from_store(ac_name, table):
+    """Return saved split dict for an AC+table, or empty dict."""
+    _init_store()
+    return st.session_state["ac_data_store"].get(ac_name, {}).get(table, {})
+ 
+def save_to_store(ac_name, table, data):
+    """Persist split dict for an AC+table."""
+    _init_store()
+    if ac_name not in st.session_state["ac_data_store"]:
+        st.session_state["ac_data_store"][ac_name] = {}
+    st.session_state["ac_data_store"][ac_name][table] = data
+ 
+def all_saved_acs():
+    """Return list of ACs that have any saved data."""
+    _init_store()
+    return sorted(st.session_state["ac_data_store"].keys())
+ 
+def export_store_json():
+    """Serialize entire store to JSON string for download."""
+    import json
+    _init_store()
+    return json.dumps(st.session_state["ac_data_store"], indent=2, ensure_ascii=False)
+ 
+def import_store_json(json_str):
+    """Load a JSON string back into the store (merge, not overwrite)."""
+    import json
+    try:
+        data = json.loads(json_str)
+        _init_store()
+        for ac, tables in data.items():
+            if ac not in st.session_state["ac_data_store"]:
+                st.session_state["ac_data_store"][ac] = {}
+            st.session_state["ac_data_store"][ac].update(tables)
+        return True, f"Imported data for {len(data)} AC(s): {', '.join(data.keys())}"
+    except Exception as e:
+        return False, str(e)
+
 # ─── Google Sheet ─────────────────────────────────────────────────────────────
 GOOGLE_SHEET_URL = st.secrets.get(
     "GOOGLE_SHEET_URL",
@@ -983,106 +1032,164 @@ if raw_df is not None:
 
         with tab5:
             st.markdown('<div class="section-header">CASTE MOVEMENT IMPACT PLANNER</div>', unsafe_allow_html=True)
+ 
+            # ── Top toolbar: save status + export/import ───────────────────
+            toolbar_l, toolbar_r = st.columns([5, 3])
+            with toolbar_l:
+                saved_acs = all_saved_acs()
+                if saved_acs:
+                    st.markdown(
+                        f'<div class="info-box">💾 Saved data for <b>{len(saved_acs)}</b> AC(s) this session: '
+                        f'{", ".join(saved_acs[:6])}{"..." if len(saved_acs) > 6 else ""}</div>',
+                        unsafe_allow_html=True
+                    )
+                else:
+                    st.markdown(
+                        '<div class="warn-box">📭 No saved data yet. Enter VS 2022 & CAPI splits and click Save.</div>',
+                        unsafe_allow_html=True
+                    )
+ 
+            with toolbar_r:
+                with st.expander("📤 Export / 📥 Import saved data"):
+                    st.caption("Export saves ALL ACs to a JSON file you can re-import next session.")
+                    if st.button("📤 Export all AC data to JSON", key="t5_export_btn"):
+                        st.session_state["t5_export_json"] = export_store_json()
+ 
+                    if "t5_export_json" in st.session_state:
+                        st.download_button(
+                            label="⬇️ Download JSON",
+                            data=st.session_state["t5_export_json"],
+                            file_name="ac_caste_splits.json",
+                            mime="application/json",
+                            key="t5_download_btn"
+                        )
+ 
+                    st.markdown("---")
+                    st.caption("Import a previously exported JSON to restore saved data.")
+                    uploaded_json = st.file_uploader("Upload JSON", type=["json"], key="t5_import_uploader")
+                    if uploaded_json is not None:
+                        if st.button("📥 Import", key="t5_import_btn"):
+                            ok, msg = import_store_json(uploaded_json.read().decode("utf-8"))
+                            if ok:
+                                st.success(msg)
+                                st.rerun()
+                            else:
+                                st.error(f"Import failed: {msg}")
+ 
             st.markdown("""
-            <div class="info-box">
-            📌 Enter caste vote splits for <b>three scenarios</b>: VS 2022 (actual), CAPI Survey (field data),
-            and Best Case (target). The tool calculates the <b>size of impact</b> — how much each caste movement
-            shifts a party's vote share — and summarises actionable targets at the bottom.
+            <div class="info-box" style="margin-top:8px">
+            📌 Enter caste splits for <b>three scenarios</b>: VS 2022 (actual), CAPI (field survey),
+            and Best Case (planning target). <b>VS 2022 and CAPI are saved per-AC</b> — switch constituencies
+            freely and your data is retained. Click <b>💾 Save</b> after editing each table.
             </div>""", unsafe_allow_html=True)
-
-            # ── Focus party selector ──────────────────────────────────────
+ 
+            # ── Focus party + filter ───────────────────────────────────────
             t5_col1, t5_col2 = st.columns([3, 2])
             with t5_col1:
                 impact_party = st.selectbox(
-                    "📊 Calculate impact on party:",
+                    "📊 Calculate size of impact on:",
                     PARTIES, index=0, key="t5_impact_party"
                 )
             with t5_col2:
-                show_all_castes = st.toggle("Show all castes (incl. <1%)", value=False, key="t5_show_all")
-
+                show_all_castes = st.toggle("Show castes < 1%", value=False, key="t5_show_all")
+ 
             pc_imp = PARTY_COLORS[impact_party]
-
-            # ── Filter castes ─────────────────────────────────────────────
-            if show_all_castes:
-                t5_castes = ac_df.copy()
-            else:
-                t5_castes = ac_df[ac_df["caste_pct"] >= 1.0].copy()
-
-            # ── Session state keys for the three tables ───────────────────
-            ss_vs22  = f"t5_vs22_{selected_ac}"
-            ss_capi  = f"t5_capi_{selected_ac}"
-            ss_best  = f"t5_best_{selected_ac}"
-
-            # Initialise with sensible defaults if not yet set
-            if ss_vs22 not in st.session_state:
-                # VS 2022: use base affinity as approximation
-                st.session_state[ss_vs22] = {
-                    row["Caste"]: {
-                        p: float(caste_splits_base.get(row["Caste"], {}).get(p, 0))
-                        for p in PARTIES
-                    }
+ 
+            # ── Filtered caste list ────────────────────────────────────────
+            t5_castes = ac_df.copy() if show_all_castes else ac_df[ac_df["caste_pct"] >= 1.0].copy()
+ 
+            # ─────────────────────────────────────────────────────────────────
+            # Build working copies of each table.
+            # Priority:  saved store  >  sensible default
+            # Best case always starts from CAPI + boost (it's a planning tool,
+            # not a historical record, so we don't persist it cross-session).
+            # ─────────────────────────────────────────────────────────────────
+ 
+            def build_default_vs22(row):
+                """VS 2022 default = base affinity (user should overwrite with real data)."""
+                return {p: float(caste_splits_base.get(row["Caste"], {}).get(p, 0)) for p in PARTIES}
+ 
+            def build_default_capi(row):
+                """CAPI default = active scenario splits."""
+                return {
+                    p: float(st.session_state["active_splits"]
+                             .get(row["Caste"], caste_splits_base.get(row["Caste"], {}))
+                             .get(p, 0))
+                    for p in PARTIES
+                }
+ 
+            def build_default_best(caste, capi_data):
+                """Best case = CAPI + 10pp boost to focus party (planning only)."""
+                cur_imp = capi_data.get(impact_party, 0)
+                boost   = min(cur_imp + 10, 95)
+                others  = {p: v for p, v in capi_data.items() if p != impact_party}
+                others_sum = sum(others.values()) or 1
+                scaled  = {p: round(v * (100 - boost) / others_sum, 1) for p, v in others.items()}
+                scaled[impact_party] = round(boost, 1)
+                return scaled
+ 
+            # Load or initialise working dicts for this AC
+            # These live in session_state with AC-specific keys so edits
+            # don't bleed between ACs during the same rerun cycle.
+            wk_vs22_key  = f"t5_wk_vs22_{selected_ac}"
+            wk_capi_key  = f"t5_wk_capi_{selected_ac}"
+            wk_best_key  = f"t5_wk_best_{selected_ac}"
+ 
+            if wk_vs22_key not in st.session_state:
+                # Try to load from persistent store first
+                saved_vs22 = load_from_store(selected_ac, "vs22")
+                st.session_state[wk_vs22_key] = {
+                    row["Caste"]: saved_vs22.get(row["Caste"], build_default_vs22(row))
                     for _, row in t5_castes.iterrows()
                 }
-            if ss_capi not in st.session_state:
-                # CAPI: copy of active scenario splits
-                st.session_state[ss_capi] = {
-                    row["Caste"]: {
-                        p: float(st.session_state["active_splits"].get(row["Caste"], caste_splits_base.get(row["Caste"], {})).get(p, 0))
-                        for p in PARTIES
-                    }
+ 
+            if wk_capi_key not in st.session_state:
+                saved_capi = load_from_store(selected_ac, "capi")
+                st.session_state[wk_capi_key] = {
+                    row["Caste"]: saved_capi.get(row["Caste"], build_default_capi(row))
                     for _, row in t5_castes.iterrows()
                 }
-            if ss_best not in st.session_state:
-                # Best case: boost impact_party by ~10pp for each caste
-                st.session_state[ss_best] = {}
-                for _, row in t5_castes.iterrows():
-                    c = row["Caste"]
-                    base_d = caste_splits_base.get(c, {}).copy()
-                    cur_imp = base_d.get(impact_party, 0)
-                    boost   = min(cur_imp + 10, 95)
-                    leftover = 100 - boost
-                    others  = {p: v for p, v in base_d.items() if p != impact_party}
-                    others_sum = sum(others.values()) or 1
-                    scaled  = {p: round(v * leftover / others_sum, 1) for p, v in others.items()}
-                    scaled[impact_party] = boost
-                    st.session_state[ss_best][c] = scaled
-
-            # ── RESET button ──────────────────────────────────────────────
-            if st.button("🔄 Reset All Three Tables", key="t5_reset"):
-                for k in [ss_vs22, ss_capi, ss_best]:
-                    if k in st.session_state:
-                        del st.session_state[k]
-                st.rerun()
-
-            st.markdown("<hr style='border-color:#30363d;margin:10px 0'>", unsafe_allow_html=True)
-
-            # ── THREE TABLES SIDE BY SIDE ─────────────────────────────────
+ 
+            if wk_best_key not in st.session_state:
+                # Best case always derives from current CAPI working copy
+                st.session_state[wk_best_key] = {
+                    row["Caste"]: build_default_best(row["Caste"], st.session_state[wk_capi_key].get(row["Caste"], {}))
+                    for _, row in t5_castes.iterrows()
+                }
+ 
+            # ── THREE TABLES ──────────────────────────────────────────────
+            st.markdown("<hr style='border-color:#30363d;margin:12px 0'>", unsafe_allow_html=True)
             col_vs22, col_capi, col_best = st.columns(3)
-
-            table_configs = [
-                (col_vs22,  ss_vs22, "🗳️ VS 2022",        "#1f6feb",  "Actual 2022 Vidhan Sabha result splits"),
-                (col_capi,  ss_capi, "📋 CAPI Survey",    "#e3b341",  "Field survey (CAPI) measured splits"),
-                (col_best,  ss_best, "🚀 Best Case",       "#56d364",  "Target / best-case splits to achieve"),
-            ]
-
-            updated_tables = {}
-
-            for col, ss_key, label, hdr_color, desc in table_configs:
+ 
+            # Helper: render one editable table and return the edited data
+            def render_table(col, wk_key, label, hdr_color, desc,
+                             is_persistent, save_table_key):
+                edited = {}
                 with col:
+                    # Header with save status indicator
+                    has_saved = store_has_ac(selected_ac, save_table_key) if is_persistent else False
+                    saved_badge = (
+                        '<span style="font-size:0.7rem;background:#56d36422;color:#56d364;'
+                        'padding:2px 7px;border-radius:10px;margin-left:8px">✓ Saved</span>'
+                        if has_saved else
+                        '<span style="font-size:0.7rem;background:#e3b34122;color:#e3b341;'
+                        'padding:2px 7px;border-radius:10px;margin-left:8px">Unsaved</span>'
+                    ) if is_persistent else ""
+ 
                     st.markdown(
-                        f'<div style="background:{hdr_color}18;border:1px solid {hdr_color}44;border-radius:8px;'
-                        f'padding:10px 14px;margin-bottom:10px">'
-                        f'<div style="font-family:Rajdhani;font-size:1rem;font-weight:700;color:{hdr_color}">{label}</div>'
+                        f'<div style="background:{hdr_color}18;border:1px solid {hdr_color}44;'
+                        f'border-radius:8px;padding:10px 14px;margin-bottom:8px">'
+                        f'<div style="font-family:Rajdhani;font-size:1rem;font-weight:700;color:{hdr_color}">'
+                        f'{label}{saved_badge}</div>'
                         f'<div style="font-size:0.75rem;color:#8b949e;margin-top:2px">{desc}</div></div>',
                         unsafe_allow_html=True
                     )
-
-                    table_data = {}
+ 
                     for _, crow in t5_castes.iterrows():
                         caste = crow["Caste"]
                         cpct  = crow["caste_pct"]
-                        cur   = st.session_state[ss_key].get(caste, {p: 0.0 for p in PARTIES})
-
+                        cur   = st.session_state[wk_key].get(caste, {p: 0.0 for p in PARTIES})
+ 
                         with st.expander(f"{caste} ({cpct:.1f}%)", expanded=(cpct >= 10)):
                             new_split = {}
                             for party in PARTIES:
@@ -1091,34 +1198,80 @@ if raw_df is not None:
                                     min_value=0.0, max_value=100.0,
                                     value=float(cur.get(party, 0)),
                                     step=1.0, format="%.1f",
-                                    key=f"{ss_key}_{caste}_{party}"
+                                    key=f"{wk_key}_{caste}_{party}"
                                 )
-
                             sp_total = sum(new_split.values())
                             if abs(sp_total - 100) > 0.5:
-                                st.caption(f"⚠️ Total {sp_total:.0f}% — normalising")
+                                st.caption(f"⚠️ Total {sp_total:.0f}% — will normalise")
                             norm = normalize_split(new_split)
-                            table_data[caste] = norm
-                            st.session_state[ss_key][caste] = norm
-
+                            # Update working copy immediately (live preview)
+                            st.session_state[wk_key][caste] = norm
+                            edited[caste] = norm
+ 
                             # Mini stacked bar
-                            bars_html = ""
-                            for p in PARTIES:
-                                w = norm.get(p, 0)
-                                if w <= 0: continue
-                                bars_html += (
-                                    f'<div title="{p}: {w:.0f}%" style="width:{w}%;height:8px;'
-                                    f'background:{PARTY_COLORS[p]};display:inline-block"></div>'
-                                )
+                            bars_html = "".join(
+                                f'<div title="{p}: {norm.get(p,0):.0f}%" style="width:{norm.get(p,0)}%;'
+                                f'height:8px;background:{PARTY_COLORS[p]};display:inline-block"></div>'
+                                for p in PARTIES if norm.get(p, 0) > 0
+                            )
                             st.markdown(
                                 f'<div style="width:100%;background:#30363d;border-radius:3px;'
                                 f'overflow:hidden;display:flex;margin-top:4px">{bars_html}</div>',
                                 unsafe_allow_html=True
                             )
-
-                    updated_tables[ss_key] = table_data
-
-            # ── Compute vote shares for all three ─────────────────────────
+ 
+                    # Save / Clear buttons for persistent tables
+                    if is_persistent:
+                        sb1, sb2 = col.columns(2)
+                        with sb1:
+                            if st.button(f"💾 Save {label}", key=f"save_btn_{wk_key}",
+                                         use_container_width=True):
+                                save_to_store(selected_ac, save_table_key,
+                                              st.session_state[wk_key].copy())
+                                st.success(f"✅ {label} saved for {selected_ac}!")
+                                st.rerun()
+                        with sb2:
+                            if st.button(f"🗑️ Clear Saved", key=f"clear_btn_{wk_key}",
+                                         use_container_width=True):
+                                if selected_ac in st.session_state["ac_data_store"]:
+                                    st.session_state["ac_data_store"][selected_ac].pop(save_table_key, None)
+                                if wk_key in st.session_state:
+                                    del st.session_state[wk_key]
+                                st.rerun()
+ 
+                return edited
+ 
+            vs22_edited = render_table(
+                col_vs22, wk_vs22_key,
+                "🗳️ VS 2022", "#1f6feb",
+                "Actual 2022 Vidhan Sabha result splits",
+                is_persistent=True, save_table_key="vs22"
+            )
+            capi_edited = render_table(
+                col_capi, wk_capi_key,
+                "📋 CAPI Survey", "#e3b341",
+                "Field survey (CAPI) measured splits",
+                is_persistent=True, save_table_key="capi"
+            )
+            best_edited = render_table(
+                col_best, wk_best_key,
+                "🚀 Best Case", "#56d364",
+                "Target / planning scenario — not saved",
+                is_persistent=False, save_table_key="best"
+            )
+ 
+            # Reset Best Case button
+            if st.button("🔄 Rebuild Best Case from current CAPI", key="t5_rebuild_best"):
+                st.session_state[wk_best_key] = {
+                    row["Caste"]: build_default_best(
+                        row["Caste"],
+                        st.session_state[wk_capi_key].get(row["Caste"], {})
+                    )
+                    for _, row in t5_castes.iterrows()
+                }
+                st.rerun()
+ 
+            # ── Compute vote shares ────────────────────────────────────────
             def compute_vs_t5(table_data):
                 totals = {p: 0.0 for p in PARTIES}
                 for _, crow in t5_castes.iterrows():
@@ -1131,271 +1284,235 @@ if raw_df is not None:
                 if s > 0:
                     totals = {p: round(v * 100 / s, 2) for p, v in totals.items()}
                 return totals
-
-            vs22_result  = compute_vs_t5(updated_tables[ss_vs22])
-            capi_result  = compute_vs_t5(updated_tables[ss_capi])
-            best_result  = compute_vs_t5(updated_tables[ss_best])
-
-            # ── VOTE SHARE SUMMARY CARDS ──────────────────────────────────
+ 
+            vs22_result  = compute_vs_t5(st.session_state[wk_vs22_key])
+            capi_result  = compute_vs_t5(st.session_state[wk_capi_key])
+            best_result  = compute_vs_t5(st.session_state[wk_best_key])
+ 
+            # ── VOTE SHARE SUMMARY ─────────────────────────────────────────
             st.markdown("<hr style='border-color:#30363d;margin:16px 0'>", unsafe_allow_html=True)
             st.markdown('<div class="section-header">VOTE SHARE ACROSS THREE SCENARIOS</div>', unsafe_allow_html=True)
-
+ 
             for p in PARTIES:
                 v22  = vs22_result.get(p, 0)
                 vcap = capi_result.get(p, 0)
                 vbst = best_result.get(p, 0)
-                d_capi = vcap - v22
-                d_best = vbst - vcap
-                d_total= vbst - v22
-                pc_p = PARTY_COLORS[p]
-                dc_c = "delta-pos" if d_capi >= 0 else "delta-neg"
-                db_c = "delta-pos" if d_best  >= 0 else "delta-neg"
-                dt_c = "delta-pos" if d_total >= 0 else "delta-neg"
+                d_capi  = vcap - v22
+                d_best  = vbst - vcap
+                d_total = vbst - v22
+                pc_p  = PARTY_COLORS[p]
                 is_focus = (p == impact_party)
-                border_style = f"border:2px solid {pc_p};" if is_focus else f"border:1px solid #30363d;"
-
+                bdr = f"border:2px solid {pc_p};" if is_focus else "border:1px solid #30363d;"
+ 
+                def dc(v): return "delta-pos" if v >= 0 else "delta-neg"
+                def ds(v): return f"+{v:.1f}" if v >= 0 else f"{v:.1f}"
+ 
                 st.markdown(f"""
-                <div class="impact-bar-wrap" style="{border_style}margin:6px 0">
-                  <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
-                    <span style="font-family:Rajdhani;font-size:1.05rem;font-weight:700;color:{pc_p}">{p}{"  ← FOCUS PARTY" if is_focus else ""}</span>
-                    <div style="display:flex;gap:20px;font-family:IBM Plex Mono;font-size:0.82rem">
-                      <span><span style="color:#8b949e">VS 2022:</span> <b style="color:#e6edf3">{v22:.1f}%</b></span>
+                <div class="impact-bar-wrap" style="{bdr}margin:5px 0">
+                  <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px">
+                    <span style="font-family:Rajdhani;font-size:1.05rem;font-weight:700;color:{pc_p}">
+                      {p}{"  ← FOCUS" if is_focus else ""}
+                    </span>
+                    <div style="display:flex;gap:18px;font-family:IBM Plex Mono;font-size:0.8rem;flex-wrap:wrap">
+                      <span><span style="color:#8b949e">VS22:</span> <b style="color:#1f6feb">{v22:.1f}%</b></span>
                       <span><span style="color:#8b949e">CAPI:</span> <b style="color:#e3b341">{vcap:.1f}%</b>
-                        <span class="{dc_c}">({'+' if d_capi>=0 else ''}{d_capi:.1f})</span></span>
+                        <span class="{dc(d_capi)}">({ds(d_capi)})</span></span>
                       <span><span style="color:#8b949e">Best:</span> <b style="color:#56d364">{vbst:.1f}%</b>
-                        <span class="{db_c}">({'+' if d_best>=0 else ''}{d_best:.1f})</span></span>
+                        <span class="{dc(d_best)}">({ds(d_best)})</span></span>
                       <span><span style="color:#8b949e">Total Δ:</span>
-                        <b class="{dt_c}">{'+' if d_total>=0 else ''}{d_total:.1f}%</b></span>
+                        <b class="{dc(d_total)}">{ds(d_total)}%</b></span>
                     </div>
                   </div>
-                  <div style="margin-top:8px;display:flex;gap:4px">
-                    <div style="flex:1;background:#1f6feb22;border-radius:3px;height:6px;position:relative">
-                      <div style="width:{min(v22,100)}%;height:6px;background:#1f6feb;border-radius:3px"></div>
-                    </div>
-                    <div style="flex:1;background:#e3b34122;border-radius:3px;height:6px">
-                      <div style="width:{min(vcap,100)}%;height:6px;background:#e3b341;border-radius:3px"></div>
-                    </div>
-                    <div style="flex:1;background:#56d36422;border-radius:3px;height:6px">
-                      <div style="width:{min(vbst,100)}%;height:6px;background:#56d364;border-radius:3px"></div>
-                    </div>
+                  <div style="margin-top:7px;display:flex;gap:3px">
+                    <div style="flex:1;background:#1f6feb18;border-radius:3px;height:5px">
+                      <div style="width:{min(v22,100):.0f}%;height:5px;background:#1f6feb;border-radius:3px"></div></div>
+                    <div style="flex:1;background:#e3b34118;border-radius:3px;height:5px">
+                      <div style="width:{min(vcap,100):.0f}%;height:5px;background:#e3b341;border-radius:3px"></div></div>
+                    <div style="flex:1;background:#56d36418;border-radius:3px;height:5px">
+                      <div style="width:{min(vbst,100):.0f}%;height:5px;background:#56d364;border-radius:3px"></div></div>
                   </div>
                 </div>""", unsafe_allow_html=True)
-
-            # ── PER-CASTE SIZE OF IMPACT ───────────────────────────────────
+ 
+            # ── SIZE OF IMPACT PER CASTE ───────────────────────────────────
             st.markdown("<hr style='border-color:#30363d;margin:16px 0'>", unsafe_allow_html=True)
             st.markdown(f'<div class="section-header">SIZE OF IMPACT PER CASTE — {impact_party}</div>', unsafe_allow_html=True)
             st.markdown(
                 f'<div class="info-box">For each caste, <b>Size of Impact</b> = how many percentage points '
-                f'<b>{impact_party}\'s overall vote share</b> changes when that caste moves from its CAPI split '
-                f'to its Best Case split. Formula: (caste_population% / 100) × (best_case_split − capi_split) / 100 × 100</div>',
+                f'<b>{impact_party}\'s overall vote share</b> changes when that caste moves '
+                f'from its CAPI split to the Best Case split. '
+                f'Formula: (caste_population% / 100) × (best_split − capi_split)</div>',
                 unsafe_allow_html=True
             )
-
-            impact_summary_rows = []
+ 
+            impact_rows = []
             for _, crow in t5_castes.iterrows():
                 caste    = crow["Caste"]
                 cpct     = crow["caste_pct"]
                 cat      = crow.get("Category", "")
-
-                vs22_sp  = updated_tables[ss_vs22].get(caste, {}).get(impact_party, 0)
-                capi_sp  = updated_tables[ss_capi].get(caste, {}).get(impact_party, 0)
-                best_sp  = updated_tables[ss_best].get(caste, {}).get(impact_party, 0)
-
-                # Size of impact = contribution shift from CAPI → Best
-                soi_capi_to_best = round((cpct / 100) * (best_sp - capi_sp), 3)
-                # Historical shift VS22 → CAPI
-                soi_vs22_to_capi = round((cpct / 100) * (capi_sp - vs22_sp), 3)
-                # Total VS22 → Best
-                soi_total = round((cpct / 100) * (best_sp - vs22_sp), 3)
-
-                if abs(soi_capi_to_best) < 0.001 and abs(soi_vs22_to_capi) < 0.001:
+                vs22_sp  = st.session_state[wk_vs22_key].get(caste, {}).get(impact_party, 0)
+                capi_sp  = st.session_state[wk_capi_key].get(caste, {}).get(impact_party, 0)
+                best_sp  = st.session_state[wk_best_key].get(caste, {}).get(impact_party, 0)
+                soi_hist = round((cpct / 100) * (capi_sp - vs22_sp), 3)
+                soi_opp  = round((cpct / 100) * (best_sp - capi_sp), 3)
+                soi_tot  = round((cpct / 100) * (best_sp - vs22_sp), 3)
+                if abs(soi_opp) < 0.001 and abs(soi_hist) < 0.001:
                     continue
-
-                impact_summary_rows.append({
-                    "caste":         caste,
-                    "cat":           cat,
-                    "cpct":          cpct,
-                    "vs22_sp":       vs22_sp,
-                    "capi_sp":       capi_sp,
-                    "best_sp":       best_sp,
-                    "soi_vs22_capi": soi_vs22_to_capi,
-                    "soi_capi_best": soi_capi_to_best,
-                    "soi_total":     soi_total,
+                impact_rows.append({
+                    "caste": caste, "cat": cat, "cpct": cpct,
+                    "vs22_sp": vs22_sp, "capi_sp": capi_sp, "best_sp": best_sp,
+                    "soi_hist": soi_hist, "soi_opp": soi_opp, "soi_tot": soi_tot,
                 })
-
-            # Sort by abs(soi_capi_best) descending
-            impact_summary_rows.sort(key=lambda x: abs(x["soi_capi_best"]), reverse=True)
-
-            for r in impact_summary_rows:
-                soi = r["soi_capi_best"]
-                soi_hist = r["soi_vs22_capi"]
-                soi_total = r["soi_total"]
-                soi_c  = "delta-pos" if soi >= 0 else "delta-neg"
-                hist_c = "delta-pos" if soi_hist >= 0 else "delta-neg"
-                tot_c  = "delta-pos" if soi_total >= 0 else "delta-neg"
-                soi_s  = f"+{soi:.2f}" if soi >= 0 else f"{soi:.2f}"
-                hist_s = f"+{soi_hist:.2f}" if soi_hist >= 0 else f"{soi_hist:.2f}"
-                tot_s  = f"+{soi_total:.2f}" if soi_total >= 0 else f"{soi_total:.2f}"
-                max_bar = max(abs(x["soi_capi_best"]) for x in impact_summary_rows) or 1
+ 
+            impact_rows.sort(key=lambda x: abs(x["soi_opp"]), reverse=True)
+ 
+            for r in impact_rows:
+                soi = r["soi_opp"]
+                soi_c = "delta-pos" if soi >= 0 else "delta-neg"
+                hist_c = "delta-pos" if r["soi_hist"] >= 0 else "delta-neg"
+                tot_c  = "delta-pos" if r["soi_tot"] >= 0 else "delta-neg"
+                def fmt(v): return f"+{v:.2f}" if v >= 0 else f"{v:.2f}"
+                max_bar = max(abs(x["soi_opp"]) for x in impact_rows) or 1
                 bar_w   = int(abs(soi) / max_bar * 100)
                 bar_col = pc_imp if soi >= 0 else "#f78166"
-                est_voters = int(r["cpct"] * (total_electors or 100000) / 100)
-
+                est_v   = int(r["cpct"] * (total_electors or 100000) / 100)
+ 
                 st.markdown(f"""
-                <div class="impact-bar-wrap" style="margin:7px 0">
-                  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">
+                <div class="impact-bar-wrap" style="margin:6px 0">
+                  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:5px">
                     <div>
                       <span style="font-family:Rajdhani;font-size:1rem;font-weight:700;color:#e6edf3">{r['caste']}</span>
-                      <span style="font-family:IBM Plex Mono;font-size:0.7rem;color:#8b949e;margin-left:8px">{r['cpct']:.1f}% · ~{est_voters:,} voters · {r['cat']}</span>
+                      <span style="font-family:IBM Plex Mono;font-size:0.7rem;color:#8b949e;margin-left:8px">
+                        {r['cpct']:.1f}% · ~{est_v:,} voters · {r['cat']}</span>
                     </div>
-                    <div style="text-align:right;font-family:IBM Plex Mono;font-size:0.75rem">
-                      <span style="color:#1f6feb">VS22: {r['vs22_sp']:.0f}%</span> →
-                      <span style="color:#e3b341">CAPI: {r['capi_sp']:.0f}%</span> →
-                      <span style="color:#56d364">Best: {r['best_sp']:.0f}%</span>
+                    <div style="font-family:IBM Plex Mono;font-size:0.74rem;text-align:right">
+                      <span style="color:#1f6feb">VS22:{r['vs22_sp']:.0f}%</span> →
+                      <span style="color:#e3b341">CAPI:{r['capi_sp']:.0f}%</span> →
+                      <span style="color:#56d364">Best:{r['best_sp']:.0f}%</span>
                     </div>
                   </div>
                   <div class="impact-bar-bg">
                     <div class="impact-bar-fill" style="width:{bar_w}%;background:{bar_col};opacity:0.85"></div>
                   </div>
-                  <div style="display:flex;justify-content:space-between;margin-top:6px;font-family:IBM Plex Mono;font-size:0.75rem">
-                    <span>Historical shift (VS22→CAPI): <span class="{hist_c}"><b>{hist_s}pp</b></span></span>
-                    <span>Opportunity (CAPI→Best): <span class="{soi_c}"><b>{soi_s}pp</b></span></span>
-                    <span>Total (VS22→Best): <span class="{tot_c}"><b>{tot_s}pp</b></span></span>
+                  <div style="display:flex;justify-content:space-between;margin-top:5px;
+                               font-family:IBM Plex Mono;font-size:0.74rem">
+                    <span>VS22→CAPI: <span class="{hist_c}"><b>{fmt(r['soi_hist'])}pp</b></span></span>
+                    <span>CAPI→Best (opportunity): <span class="{soi_c}"><b>{fmt(soi)}pp</b></span></span>
+                    <span>VS22→Best: <span class="{tot_c}"><b>{fmt(r['soi_tot'])}pp</b></span></span>
                   </div>
                 </div>""", unsafe_allow_html=True)
-
+ 
             # ── ACTIONABLE SUMMARY ─────────────────────────────────────────
             st.markdown("<hr style='border-color:#30363d;margin:16px 0'>", unsafe_allow_html=True)
-            st.markdown('<div class="section-header">📋 ACTIONABLE SUMMARY — WHAT TO DO TO WIN</div>', unsafe_allow_html=True)
-
-            # Gains vs losses
-            gains  = [r for r in impact_summary_rows if r["soi_capi_best"] > 0.01]
-            losses = [r for r in impact_summary_rows if r["soi_capi_best"] < -0.01]
-
-            total_opportunity = sum(r["soi_capi_best"] for r in gains)
-            total_risk        = sum(r["soi_capi_best"] for r in losses)
-            net_impact        = sum(r["soi_capi_best"] for r in impact_summary_rows)
-
-            # Summary KPIs
+            st.markdown('<div class="section-header">📋 ACTIONABLE SUMMARY</div>', unsafe_allow_html=True)
+ 
+            gains  = [r for r in impact_rows if r["soi_opp"] >  0.01]
+            losses = [r for r in impact_rows if r["soi_opp"] < -0.01]
+            total_opportunity = sum(r["soi_opp"] for r in gains)
+            total_risk        = sum(r["soi_opp"] for r in losses)
+            net_impact        = sum(r["soi_opp"] for r in impact_rows)
+ 
             k1, k2, k3, k4 = st.columns(4)
-            with k1:
-                st.markdown(f"""<div class="metric-card" style="border-left:4px solid #56d364">
-                <div class="metric-label">Total Opportunity</div>
-                <div class="metric-value" style="color:#56d364">+{total_opportunity:.2f}pp</div>
-                <div class="metric-delta dpos">If all gains achieved</div></div>""", unsafe_allow_html=True)
-            with k2:
-                st.markdown(f"""<div class="metric-card" style="border-left:4px solid #f78166">
-                <div class="metric-label">Total Risk</div>
-                <div class="metric-value" style="color:#f78166">{total_risk:.2f}pp</div>
-                <div class="metric-delta dneg">If losses materialise</div></div>""", unsafe_allow_html=True)
-            with k3:
-                net_col = "#56d364" if net_impact >= 0 else "#f78166"
-                net_cls = "dpos" if net_impact >= 0 else "dneg"
-                st.markdown(f"""<div class="metric-card" style="border-left:4px solid {net_col}">
-                <div class="metric-label">Net Impact</div>
-                <div class="metric-value" style="color:{net_col}">{'+' if net_impact>=0 else ''}{net_impact:.2f}pp</div>
-                <div class="metric-delta {net_cls}">{impact_party} overall</div></div>""", unsafe_allow_html=True)
-            with k4:
-                proj_best = best_result.get(impact_party, 0)
-                proj_capi = capi_result.get(impact_party, 0)
-                st.markdown(f"""<div class="metric-card" style="border-left:4px solid {pc_imp}">
-                <div class="metric-label">Projected Best Case</div>
-                <div class="metric-value" style="color:{pc_imp}">{proj_best:.1f}%</div>
-                <div class="metric-delta dpos">vs CAPI: {proj_capi:.1f}%</div></div>""", unsafe_allow_html=True)
-
-            # Bullet-point action items
-            if gains or losses:
-                st.markdown("<br>", unsafe_allow_html=True)
-
-                if gains:
-                    st.markdown(
-                        '<div style="font-family:Rajdhani;font-size:1rem;font-weight:600;color:#56d364;'
-                        'margin-bottom:8px">✅ OPPORTUNITIES — CASTES TO CONSOLIDATE</div>',
-                        unsafe_allow_html=True
-                    )
-                    for r in gains:
-                        soi = r["soi_capi_best"]
-                        verb = "consolidate" if r["capi_sp"] < r["best_sp"] else "retain"
-                        importance = "🔴 Critical" if soi >= 1.0 else ("🟡 Important" if soi >= 0.5 else "🟢 Marginal")
-                        est_v = int(r["cpct"] * (total_electors or 100000) / 100)
-                        st.markdown(f"""
-                        <div style="background:#56d36410;border:1px solid #56d36440;border-radius:8px;
-                        padding:12px 16px;margin:6px 0;border-left:4px solid #56d364">
-                          <div style="font-family:IBM Plex Sans;font-size:0.9rem;color:#e6edf3">
-                            {importance} &nbsp;·&nbsp;
-                            Need to <b>{verb} {r['caste']}</b> consolidation from
-                            <span style="color:#e3b341;font-weight:600">{r['capi_sp']:.0f}%</span> to
-                            <span style="color:#56d364;font-weight:600">{r['best_sp']:.0f}%</span>
-                            which will make <span style="color:{pc_imp};font-weight:700">{impact_party}</span>
-                            vote share increase by
-                            <span style="color:#56d364;font-weight:700">+{soi:.2f}pp</span>
-                          </div>
-                          <div style="font-family:IBM Plex Mono;font-size:0.72rem;color:#8b949e;margin-top:4px">
-                            Caste weight: {r['cpct']:.1f}% of AC &nbsp;·&nbsp; Est. ~{est_v:,} voters &nbsp;·&nbsp; {r['cat']}
-                          </div>
-                        </div>""", unsafe_allow_html=True)
-
-                if losses:
-                    st.markdown(
-                        '<div style="font-family:Rajdhani;font-size:1rem;font-weight:600;color:#f78166;'
-                        'margin-top:14px;margin-bottom:8px">⚠️ RISKS — CASTES MOVING AWAY</div>',
-                        unsafe_allow_html=True
-                    )
-                    for r in losses:
-                        soi = r["soi_capi_best"]
-                        est_v = int(r["cpct"] * (total_electors or 100000) / 100)
-                        importance = "🔴 Critical" if abs(soi) >= 1.0 else ("🟡 Important" if abs(soi) >= 0.5 else "🟢 Manageable")
-                        st.markdown(f"""
-                        <div style="background:#f7816610;border:1px solid #f7816640;border-radius:8px;
-                        padding:12px 16px;margin:6px 0;border-left:4px solid #f78166">
-                          <div style="font-family:IBM Plex Sans;font-size:0.9rem;color:#e6edf3">
-                            {importance} &nbsp;·&nbsp;
-                            Risk: <b>{r['caste']}</b> consolidation dropping from
-                            <span style="color:#e3b341;font-weight:600">{r['capi_sp']:.0f}%</span> to
-                            <span style="color:#f78166;font-weight:600">{r['best_sp']:.0f}%</span>
-                            will reduce <span style="color:{pc_imp};font-weight:700">{impact_party}</span>
-                            vote share by
-                            <span style="color:#f78166;font-weight:700">{soi:.2f}pp</span>
-                          </div>
-                          <div style="font-family:IBM Plex Mono;font-size:0.72rem;color:#8b949e;margin-top:4px">
-                            Caste weight: {r['cpct']:.1f}% of AC &nbsp;·&nbsp; Est. ~{est_v:,} voters &nbsp;·&nbsp; {r['cat']}
-                          </div>
-                        </div>""", unsafe_allow_html=True)
-
-                # Plain-text summary for copy-paste
-                st.markdown("<br>", unsafe_allow_html=True)
-                st.markdown('<div class="section-header">📤 PLAIN TEXT SUMMARY (COPY-PASTE READY)</div>', unsafe_allow_html=True)
-                summary_lines = [f"Impact Planner — {selected_ac} | Focus: {impact_party}\n{'='*60}"]
-                summary_lines.append(f"\nVOTE SHARE SUMMARY:")
-                summary_lines.append(f"  VS 2022 : {vs22_result.get(impact_party,0):.1f}%")
-                summary_lines.append(f"  CAPI    : {capi_result.get(impact_party,0):.1f}%")
-                summary_lines.append(f"  Best    : {best_result.get(impact_party,0):.1f}%")
-                summary_lines.append(f"\nACTIONABLE TARGETS:")
-                for r in gains:
-                    summary_lines.append(
-                        f"  ✅ Need to increase {r['caste']} consolidation from "
-                        f"{r['capi_sp']:.0f}% to {r['best_sp']:.0f}% → "
-                        f"{impact_party} +{r['soi_capi_best']:.2f}pp"
-                    )
-                for r in losses:
-                    summary_lines.append(
-                        f"  ⚠️  Risk: {r['caste']} may drop from "
-                        f"{r['capi_sp']:.0f}% to {r['best_sp']:.0f}% → "
-                        f"{impact_party} {r['soi_capi_best']:.2f}pp"
-                    )
-                summary_lines.append(f"\nNET OPPORTUNITY: {'+' if net_impact>=0 else ''}{net_impact:.2f}pp")
-                summary_lines.append(f"TOTAL OPPORTUNITY (gains only): +{total_opportunity:.2f}pp")
-                summary_lines.append(f"TOTAL RISK (losses only): {total_risk:.2f}pp")
-
-                st.text_area(
-                    "Summary",
-                    value="\n".join(summary_lines),
-                    height=260,
-                    key="t5_summary_text"
+            def kpi(col, label, value, sub, color, cls):
+                with col:
+                    col.markdown(f"""<div class="metric-card" style="border-left:4px solid {color}">
+                    <div class="metric-label">{label}</div>
+                    <div class="metric-value" style="color:{color}">{value}</div>
+                    <div class="metric-delta {cls}">{sub}</div></div>""", unsafe_allow_html=True)
+ 
+            kpi(k1,"Total Opportunity",f"+{total_opportunity:.2f}pp","If all gains achieved","#56d364","dpos")
+            kpi(k2,"Total Risk",f"{total_risk:.2f}pp","If all losses occur","#f78166","dneg")
+            net_col = "#56d364" if net_impact >= 0 else "#f78166"
+            kpi(k3,"Net Impact",f"{'+' if net_impact>=0 else ''}{net_impact:.2f}pp",
+                f"{impact_party} overall",net_col,"dpos" if net_impact>=0 else "dneg")
+            kpi(k4,"Projected Best",f"{best_result.get(impact_party,0):.1f}%",
+                f"vs CAPI {capi_result.get(impact_party,0):.1f}%",pc_imp,"dpos")
+ 
+            if gains:
+                st.markdown(
+                    '<div style="font-family:Rajdhani;font-size:1rem;font-weight:600;color:#56d364;'
+                    'margin:14px 0 8px">✅ OPPORTUNITIES — CASTES TO CONSOLIDATE</div>',
+                    unsafe_allow_html=True
                 )
-            else:
-                st.markdown('<div class="info-box">No significant caste movements detected. Adjust the Best Case splits above to model scenarios.</div>', unsafe_allow_html=True)
-
+                for r in gains:
+                    soi = r["soi_opp"]
+                    priority = "🔴 Critical" if soi >= 1.0 else ("🟡 Important" if soi >= 0.5 else "🟢 Marginal")
+                    est_v = int(r["cpct"] * (total_electors or 100000) / 100)
+                    st.markdown(f"""
+                    <div style="background:#56d36410;border:1px solid #56d36440;border-radius:8px;
+                    padding:12px 16px;margin:5px 0;border-left:4px solid #56d364">
+                      <div style="font-family:IBM Plex Sans;font-size:0.9rem;color:#e6edf3">
+                        {priority} &nbsp;·&nbsp; Need to consolidate <b>{r['caste']}</b> from
+                        <span style="color:#e3b341;font-weight:600">{r['capi_sp']:.0f}%</span> →
+                        <span style="color:#56d364;font-weight:600">{r['best_sp']:.0f}%</span>
+                        which will make <span style="color:{pc_imp};font-weight:700">{impact_party}</span>
+                        vote share increase by
+                        <span style="color:#56d364;font-weight:700">+{soi:.2f}pp</span>
+                      </div>
+                      <div style="font-family:IBM Plex Mono;font-size:0.7rem;color:#8b949e;margin-top:3px">
+                        {r['cpct']:.1f}% of AC · ~{est_v:,} voters · {r['cat']}
+                      </div>
+                    </div>""", unsafe_allow_html=True)
+ 
+            if losses:
+                st.markdown(
+                    '<div style="font-family:Rajdhani;font-size:1rem;font-weight:600;color:#f78166;'
+                    'margin:14px 0 8px">⚠️ RISKS — CASTES MOVING AWAY</div>',
+                    unsafe_allow_html=True
+                )
+                for r in losses:
+                    soi = r["soi_opp"]
+                    priority = "🔴 Critical" if abs(soi) >= 1.0 else ("🟡 Important" if abs(soi) >= 0.5 else "🟢 Manageable")
+                    est_v = int(r["cpct"] * (total_electors or 100000) / 100)
+                    st.markdown(f"""
+                    <div style="background:#f7816610;border:1px solid #f7816640;border-radius:8px;
+                    padding:12px 16px;margin:5px 0;border-left:4px solid #f78166">
+                      <div style="font-family:IBM Plex Sans;font-size:0.9rem;color:#e6edf3">
+                        {priority} &nbsp;·&nbsp; Risk: <b>{r['caste']}</b> dropping from
+                        <span style="color:#e3b341;font-weight:600">{r['capi_sp']:.0f}%</span> →
+                        <span style="color:#f78166;font-weight:600">{r['best_sp']:.0f}%</span>
+                        will reduce <span style="color:{pc_imp};font-weight:700">{impact_party}</span>
+                        vote share by
+                        <span style="color:#f78166;font-weight:700">{soi:.2f}pp</span>
+                      </div>
+                      <div style="font-family:IBM Plex Mono;font-size:0.7rem;color:#8b949e;margin-top:3px">
+                        {r['cpct']:.1f}% of AC · ~{est_v:,} voters · {r['cat']}
+                      </div>
+                    </div>""", unsafe_allow_html=True)
+ 
+            # ── Plain text summary ─────────────────────────────────────────
+            st.markdown("<br>", unsafe_allow_html=True)
+            st.markdown('<div class="section-header">📤 PLAIN TEXT SUMMARY (COPY-PASTE)</div>', unsafe_allow_html=True)
+            lines = [
+                f"Impact Planner — {selected_ac} | Focus: {impact_party}",
+                "=" * 60,
+                "",
+                "VOTE SHARE:",
+                f"  VS 2022 : {vs22_result.get(impact_party,0):.1f}%",
+                f"  CAPI    : {capi_result.get(impact_party,0):.1f}%",
+                f"  Best    : {best_result.get(impact_party,0):.1f}%",
+                "",
+                "ACTIONABLE TARGETS:",
+            ]
+            for r in gains:
+                lines.append(
+                    f"  ✅ Need to increase {r['caste']} consolidation "
+                    f"from {r['capi_sp']:.0f}% to {r['best_sp']:.0f}% "
+                    f"→ {impact_party} +{r['soi_opp']:.2f}pp"
+                )
+            for r in losses:
+                lines.append(
+                    f"  ⚠️  Risk: {r['caste']} may drop "
+                    f"from {r['capi_sp']:.0f}% to {r['best_sp']:.0f}% "
+                    f"→ {impact_party} {r['soi_opp']:.2f}pp"
+                )
+            lines += [
+                "",
+                f"Net opportunity: {'+' if net_impact>=0 else ''}{net_impact:.2f}pp",
+                f"Total gains:     +{total_opportunity:.2f}pp",
+                f"Total risk:      {total_risk:.2f}pp",
+            ]
+            st.text_area("", value="\n".join(lines), height=260, key="t5_summary_text")
+ 
     else:
         st.error("❌ Could not find required columns (AC Name, Caste (Eng), Caste %).")
 
