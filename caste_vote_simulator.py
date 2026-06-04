@@ -503,7 +503,7 @@ if raw_df is not None:
             "📊 AC Overview & Survey",
             "🎛️ Scenario Builder",
             "📈 Impact Analysis",
-            "📋 Caste-Party Matrix"
+            "📋 Caste-Party Matrix",
             "🎯 Impact Planner"
         ])
 
