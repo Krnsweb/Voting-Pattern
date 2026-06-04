@@ -700,7 +700,7 @@ if raw_df is not None:
                         yaxis=dict(range=[0, 110], showgrid=False, showticklabels=False),
                         xaxis=dict(showgrid=False, tickfont=dict(size=10, family="Rajdhani")),
                     )
-                    st.plotly_chart(mini_fig, width="stretch")
+                    st.plotly_chart(mini_fig, width="stretch", key=f"mini_{caste}")
 
             # ── Quick Swing Simulator ─────────────────────────────────────
             st.markdown('<div class="section-header">QUICK SWING SIMULATOR</div>', unsafe_allow_html=True)
