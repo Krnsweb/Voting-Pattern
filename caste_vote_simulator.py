@@ -6,6 +6,9 @@ import plotly.express as px
 from plotly.subplots import make_subplots
 import json
 import re
+import pandas as pd
+import streamlit as st
+from urllib.parse import urlparse
 from io import StringIO
 
 # ─── Page Config ─────────────────────────────────────────────────────────────
@@ -341,58 +344,63 @@ def caste_impact_score(caste_pct: float, split_before: dict, split_after: dict, 
 with st.sidebar:
     st.markdown('<div class="section-header">DATA SOURCE</div>', unsafe_allow_html=True)
 
-    data_source = st.radio(
-        "How to load caste data?",
-        ["📋 Use Sample Data (Behat AC)", "📊 Paste Google Sheet CSV", "✏️ Manual Entry"],
-        index=0
+    # GOOGLE SHEET BACKEND
+
+GOOGLE_SHEET_URL = st.secrets.get(
+    "GOOGLE_SHEET_URL",
+    "https://docs.google.com/spreadsheets/d/e/2PACX-1vSonf79A9F3Ezu86qSskR5ed0pdVxZvIgQ6ymaN2omhWALmH-SfoNwUQ3CPLSK4xTOrRAU64TXG8wLj/pub?output=csv"
+)
+
+@st.cache_data(ttl=300)
+def load_master_data():
+    df = pd.read_csv(GOOGLE_SHEET_URL)
+
+    df.columns = [c.strip() for c in df.columns]
+
+    return df
+
+try:
+    raw_df = load_master_data()
+
+    st.success(
+        f"✅ Loaded {len(raw_df):,} caste records from Google Sheet"
     )
 
-    sample_csv = """AC Number,AC Name,District,PC #,PC Name,AC Zone,PC Zone,Caste (Eng),Caste (Local Language),Category,Caste % [29 May],Total Electors [29 May],Caste population [29 May],Rank
-1,Behat,Saharanpur,1,Saharanpur,West,West,Muslim,मुस्लिम,Muslim,49.90,366939,183102.561,1
-1,Behat,Saharanpur,1,Saharanpur,West,West,Jatav,जाटव,SC,18.38,366939,67443.3882,2
-1,Behat,Saharanpur,1,Saharanpur,West,West,Saini,सैनी,OBC,9.76,366939,35813.2464,3
-1,Behat,Saharanpur,1,Saharanpur,West,West,Kashyap/Nishad,कश्यप/निषाद,OBC,5.34,366939,19594.5426,4
-1,Behat,Saharanpur,1,Saharanpur,West,West,Thakur,ठाकुर,GEN,5.08,366939,18640.5012,5
-1,Behat,Saharanpur,1,Saharanpur,West,West,Kamboj,कम्बोज,OBC,2.92,366939,10714.6188,6
-1,Behat,Saharanpur,1,Saharanpur,West,West,Brahmin,ब्राह्मण,GEN,2.16,366939,7925.8824,7
-1,Behat,Saharanpur,1,Saharanpur,West,West,Kumhar/Prajapat,कुम्हार/प्रजापति/विश्वकर्मा,OBC,1.59,366939,5834.3301,8
-1,Behat,Saharanpur,1,Saharanpur,West,West,Gujjar,गूजर,OBC,1.47,366939,5394.0033,9
-1,Behat,Saharanpur,1,Saharanpur,West,West,Pal/Gadariya,पाल/गडरिया/धनगर,OBC,0.97,366939,3559.3083,10
-1,Behat,Saharanpur,1,Saharanpur,West,West,Valmiki,वाल्मिकि,SC,0.74,366939,2715.3486,11
-1,Behat,Saharanpur,1,Saharanpur,West,West,Baniya,बनिया,GEN,0.47,366939,1724.6133,12
-1,Behat,Saharanpur,1,Saharanpur,West,West,Tyagi,त्यागी,GEN,0.34,366939,1247.5926,13
-1,Behat,Saharanpur,1,Saharanpur,West,West,Teli,तेली,OBC,0.27,366939,990.7353,14
-1,Behat,Saharanpur,1,Saharanpur,West,West,Dhobi,धोबी,SC,0.25,366939,917.3475,15
-1,Behat,Saharanpur,1,Saharanpur,West,West,Punjabi,पंजाबी,GEN,0.20,366939,733.878,16
-1,Behat,Saharanpur,1,Saharanpur,West,West,OBC_Others,अन्य ओबीसी,OBC,0.09,366939,330.2451,17
-1,Behat,Saharanpur,1,Saharanpur,West,West,Gen_Others,अन्य सामान्य,GEN,0.05,366939,183.4695,18
-1,Behat,Saharanpur,1,Saharanpur,West,West,SC_Others,अन्य एससी,SC,0.01,366939,36.6939,19
-1,Behat,Saharanpur,1,Saharanpur,West,West,ST_Others,अन्य एसटी,ST,0.01,366939,36.6939,20
-1,Behat,Saharanpur,1,Saharanpur,West,West,Jat,जाट,OBC,0.00,366939,0,21
-1,Behat,Saharanpur,1,Saharanpur,West,West,Dheemar/Dhimar,धीमर/धीमन,OBC,0.00,366939,0,22
-1,Behat,Saharanpur,1,Saharanpur,West,West,Khatik/Sonkar,खटीक/सोनकर,SC,0.00,366939,0,23
-1,Behat,Saharanpur,1,Saharanpur,West,West,Kayastha,कायस्थ,GEN,0.00,366939,0,24"""
+except Exception as e:
 
-    raw_df = None
+    st.error(
+        f"Google Sheet Load Failed: {e}"
+    )
+    st.markdown(
+    '<div class="section-header">CONSTITUENCY SELECTION</div>',
+    unsafe_allow_html=True
+)
 
-    if data_source == "📋 Use Sample Data (Behat AC)":
-        raw_df = pd.read_csv(StringIO(sample_csv))
-        st.success("✅ Loaded Behat (Saharanpur) AC data")
+districts = sorted(
+    raw_df["District"].dropna().unique()
+)
 
-    elif data_source == "📊 Paste Google Sheet CSV":
-        st.markdown('<div class="info-box">Export your Google Sheet as CSV (File → Download → CSV) and paste the contents below.</div>', unsafe_allow_html=True)
-        csv_text = st.text_area("Paste CSV data here:", height=200, placeholder="AC Number,AC Name,District,...")
-        if csv_text.strip():
-            try:
-                raw_df = pd.read_csv(StringIO(csv_text))
-                st.success(f"✅ Loaded {len(raw_df)} rows")
-            except Exception as e:
-                st.error(f"Parse error: {e}")
+selected_district = st.selectbox(
+    "Select District",
+    districts
+)
 
-    elif data_source == "✏️ Manual Entry":
-        st.markdown('<div class="info-box">Enter caste percentages manually. They should sum to ~100%.</div>', unsafe_allow_html=True)
-        raw_df = None  # Will be built from manual inputs
+acs = sorted(
+    raw_df[
+        raw_df["District"] == selected_district
+    ]["AC Name"].dropna().unique()
+)
 
+selected_ac = st.selectbox(
+    "Select Assembly Constituency",
+    acs
+)
+
+ac_df = raw_df[
+    raw_df["AC Name"] == selected_ac
+].copy()
+
+    st.stop()
     st.markdown('<div class="section-header">SURVEY INPUTS</div>', unsafe_allow_html=True)
     survey_bjp    = st.number_input("BJP+ Survey Vote %",    min_value=0.0, max_value=100.0, value=44.0, step=0.5, format="%.1f")
     survey_sp     = st.number_input("SP+INC Survey Vote %",  min_value=0.0, max_value=100.0, value=38.0, step=0.5, format="%.1f")
