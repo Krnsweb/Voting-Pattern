@@ -483,9 +483,14 @@ if raw_df is not None:
             caste_splits_base[c] = normalize_split(affinity.copy())
 
         # ─── SINGLE SOURCE OF TRUTH: active_splits in session_state ───────
-        if "active_splits" not in st.session_state:
+        # ─── SINGLE SOURCE OF TRUTH: active_splits in session_state ───────
+        # Reset when AC changes so scenario starts fresh from caste model
+        if (
+            "active_splits" not in st.session_state
+            or st.session_state.get("_current_ac") != selected_ac
+        ):
             st.session_state["active_splits"] = {k: v.copy() for k, v in caste_splits_base.items()}
-
+            st.session_state["_current_ac"] = selected_ac
         # Convenience: current active splits
         active_splits = st.session_state["active_splits"]
 
