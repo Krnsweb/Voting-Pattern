@@ -341,9 +341,9 @@ def caste_impact_score(caste_pct: float, split_before: dict, split_after: dict, 
     return (caste_pct / 100) * delta
 
     # ─── GOOGLE SHEET BACKEND ─────────────────────────────────────────────
-
+GOOGLE_SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSonf79A9F3Ezu86qSskR5ed0pdVxZvIgQ6ymaN2omhWALmH-SfoNwUQ3CPLSK4xTOrRAU64TXG8wLj/pub?output=csv"
 GOOGLE_SHEET_URL = st.secrets.get(
-    "https://docs.google.com/spreadsheets/d/e/2PACX-1vSonf79A9F3Ezu86qSskR5ed0pdVxZvIgQ6ymaN2omhWALmH-SfoNwUQ3CPLSK4xTOrRAU64TXG8wLj/pub?output=csv",
+    "GOOGLE_SHEET_URL",
     ""
 )
 
