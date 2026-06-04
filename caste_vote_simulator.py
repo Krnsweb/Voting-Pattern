@@ -38,7 +38,6 @@ st.markdown("""
     --bsp:       #457B9D;
     --inc:       #2DC653;
     --others:    #9B5DE5;
-    --rld:       #F4A261;
 }
 
 html, body, [class*="css"] {
@@ -263,54 +262,49 @@ div[data-testid="stVerticalBlock"] { gap: 12px; }
 </style>
 """, unsafe_allow_html=True)
 
-# ─── Default caste-party affinity (based on UP political dynamics) ─────────────
-DEFAULT_CASTE_PARTY_AFFINITY = {
-    "Muslim":           {"BJP+": 5,  "SP+INC": 75, "BSP": 12, "RLD": 3,  "Others": 5},
-    "Jatav":            {"BJP+": 5,  "SP+INC": 10, "BSP": 80, "RLD": 2,  "Others": 3},
-    "Jat":              {"BJP+": 45, "SP+INC": 15, "BSP": 5,  "RLD": 30, "Others": 5},
-    "Saini":            {"BJP+": 40, "SP+INC": 35, "BSP": 15, "RLD": 5,  "Others": 5},
-    "Kashyap/Nishad":   {"BJP+": 45, "SP+INC": 30, "BSP": 15, "RLD": 5,  "Others": 5},
-    "Thakur":           {"BJP+": 70, "SP+INC": 15, "BSP": 5,  "RLD": 5,  "Others": 5},
-    "Kamboj":           {"BJP+": 50, "SP+INC": 25, "BSP": 15, "RLD": 5,  "Others": 5},
-    "Brahmin":          {"BJP+": 65, "SP+INC": 15, "BSP": 5,  "RLD": 8,  "Others": 7},
-    "Kumhar/Prajapat":  {"BJP+": 40, "SP+INC": 30, "BSP": 20, "RLD": 5,  "Others": 5},
-    "Gujjar":           {"BJP+": 45, "SP+INC": 20, "BSP": 10, "RLD": 20, "Others": 5},
-    "Pal/Gadariya":     {"BJP+": 35, "SP+INC": 35, "BSP": 20, "RLD": 5,  "Others": 5},
-    "Valmiki":          {"BJP+": 35, "SP+INC": 20, "BSP": 35, "RLD": 5,  "Others": 5},
-    "Baniya":           {"BJP+": 72, "SP+INC": 12, "BSP": 5,  "RLD": 5,  "Others": 6},
-    "Tyagi":            {"BJP+": 60, "SP+INC": 20, "BSP": 5,  "RLD": 10, "Others": 5},
-    "Teli":             {"BJP+": 45, "SP+INC": 30, "BSP": 15, "RLD": 5,  "Others": 5},
-    "Dhobi":            {"BJP+": 25, "SP+INC": 25, "BSP": 42, "RLD": 3,  "Others": 5},
-    "Punjabi":          {"BJP+": 65, "SP+INC": 15, "BSP": 5,  "RLD": 10, "Others": 5},
-    "OBC_Others":       {"BJP+": 40, "SP+INC": 30, "BSP": 20, "RLD": 5,  "Others": 5},
-    "Gen_Others":       {"BJP+": 50, "SP+INC": 25, "BSP": 10, "RLD": 8,  "Others": 7},
-    "SC_Others":        {"BJP+": 25, "SP+INC": 20, "BSP": 45, "RLD": 5,  "Others": 5},
-    "ST_Others":        {"BJP+": 35, "SP+INC": 25, "BSP": 25, "RLD": 5,  "Others": 10},
-    "Jat (OBC)":        {"BJP+": 45, "SP+INC": 20, "BSP": 5,  "RLD": 25, "Others": 5},
-    "Dheemar/Dhimar":   {"BJP+": 40, "SP+INC": 30, "BSP": 20, "RLD": 5,  "Others": 5},
-    "Khatik/Sonkar":    {"BJP+": 30, "SP+INC": 20, "BSP": 42, "RLD": 3,  "Others": 5},
-    "Kayastha":         {"BJP+": 60, "SP+INC": 20, "BSP": 5,  "RLD": 8,  "Others": 7},
-}
-
+# ══════════════════════════════════════════════════════════════════════════════
+# PARTIES — RLD merged into BJP+ (alliance)
+# ══════════════════════════════════════════════════════════════════════════════
 PARTY_COLORS = {
     "BJP+":   "#FF6B35",
     "SP+INC": "#E63946",
     "BSP":    "#457B9D",
-    "RLD":    "#F4A261",
     "Others": "#9B5DE5",
 }
-
 PARTIES = list(PARTY_COLORS.keys())
 
-# ─── Helper: compute vote share from caste splits ─────────────────────────────
-def compute_vote_share(caste_data: pd.DataFrame, splits: dict) -> dict:
-    """
-    caste_data: DataFrame with columns [Caste, caste_pct]
-    splits: { caste_name: {party: pct, ...}, ... }
-    Returns: {party: vote_share_pct}
-    """
-    totals = {p: 0.0 for p in PARTIES}
+# ─── Default caste-party affinity (RLD folded into BJP+) ─────────────────────
+DEFAULT_CASTE_PARTY_AFFINITY = {
+    "Muslim":           {"BJP+": 8,   "SP+INC": 75, "BSP": 12, "Others": 5},
+    "Jatav":            {"BJP+": 7,   "SP+INC": 10, "BSP": 80, "Others": 3},
+    "Jat":              {"BJP+": 75,  "SP+INC": 15, "BSP": 5,  "Others": 5},
+    "Saini":            {"BJP+": 45,  "SP+INC": 35, "BSP": 15, "Others": 5},
+    "Kashyap/Nishad":   {"BJP+": 50,  "SP+INC": 30, "BSP": 15, "Others": 5},
+    "Thakur":           {"BJP+": 75,  "SP+INC": 15, "BSP": 5,  "Others": 5},
+    "Kamboj":           {"BJP+": 55,  "SP+INC": 25, "BSP": 15, "Others": 5},
+    "Brahmin":          {"BJP+": 73,  "SP+INC": 15, "BSP": 5,  "Others": 7},
+    "Kumhar/Prajapat":  {"BJP+": 45,  "SP+INC": 30, "BSP": 20, "Others": 5},
+    "Gujjar":           {"BJP+": 65,  "SP+INC": 20, "BSP": 10, "Others": 5},
+    "Pal/Gadariya":     {"BJP+": 40,  "SP+INC": 35, "BSP": 20, "Others": 5},
+    "Valmiki":          {"BJP+": 40,  "SP+INC": 20, "BSP": 35, "Others": 5},
+    "Baniya":           {"BJP+": 77,  "SP+INC": 12, "BSP": 5,  "Others": 6},
+    "Tyagi":            {"BJP+": 70,  "SP+INC": 20, "BSP": 5,  "Others": 5},
+    "Teli":             {"BJP+": 50,  "SP+INC": 30, "BSP": 15, "Others": 5},
+    "Dhobi":            {"BJP+": 28,  "SP+INC": 25, "BSP": 42, "Others": 5},
+    "Punjabi":          {"BJP+": 75,  "SP+INC": 15, "BSP": 5,  "Others": 5},
+    "OBC_Others":       {"BJP+": 45,  "SP+INC": 30, "BSP": 20, "Others": 5},
+    "Gen_Others":       {"BJP+": 58,  "SP+INC": 25, "BSP": 10, "Others": 7},
+    "SC_Others":        {"BJP+": 30,  "SP+INC": 20, "BSP": 45, "Others": 5},
+    "ST_Others":        {"BJP+": 40,  "SP+INC": 25, "BSP": 25, "Others": 10},
+    "Jat (OBC)":        {"BJP+": 70,  "SP+INC": 20, "BSP": 5,  "Others": 5},
+    "Dheemar/Dhimar":   {"BJP+": 45,  "SP+INC": 30, "BSP": 20, "Others": 5},
+    "Khatik/Sonkar":    {"BJP+": 33,  "SP+INC": 20, "BSP": 42, "Others": 5},
+    "Kayastha":         {"BJP+": 68,  "SP+INC": 20, "BSP": 5,  "Others": 7},
+}
 
+# ─── Helpers ──────────────────────────────────────────────────────────────────
+def compute_vote_share(caste_data: pd.DataFrame, splits: dict) -> dict:
+    totals = {p: 0.0 for p in PARTIES}
     for _, row in caste_data.iterrows():
         caste = row["Caste"]
         weight = row["caste_pct"] / 100.0
@@ -318,26 +312,18 @@ def compute_vote_share(caste_data: pd.DataFrame, splits: dict) -> dict:
             for party, share in splits[caste].items():
                 if party in totals:
                     totals[party] += weight * share
-
-    # Normalize to 100%
     s = sum(totals.values())
     if s > 0:
         totals = {p: round(v * 100 / s, 2) for p, v in totals.items()}
     return totals
 
 def normalize_split(split_dict: dict) -> dict:
-    """Normalize a party split dict to sum to 100."""
     s = sum(split_dict.values())
     if s == 0:
         return split_dict
     return {k: round(v * 100 / s, 2) for k, v in split_dict.items()}
 
-def caste_impact_score(caste_pct: float, split_before: dict, split_after: dict, party: str) -> float:
-    """How many points does this caste swing contribute to `party`."""
-    delta = split_after.get(party, 0) - split_before.get(party, 0)
-    return (caste_pct / 100) * delta
-
-# ─── GOOGLE SHEET BACKEND ─────────────────────────────────────────────
+# ─── Google Sheet ─────────────────────────────────────────────────────────────
 GOOGLE_SHEET_URL = st.secrets.get(
     "GOOGLE_SHEET_URL",
     "https://docs.google.com/spreadsheets/d/e/2PACX-1vSonf79A9F3Ezu86qSskR5ed0pdVxZvIgQ6ymaN2omhWALmH-SfoNwUQ3CPLSK4xTOrRAU64TXG8wLj/pub?output=csv"
@@ -349,12 +335,9 @@ def load_master_sheet():
     df.columns = [c.strip() for c in df.columns]
     return df
 
-# ─── Sidebar ──────────────────────────────────────────────────────────
+# ─── Sidebar ──────────────────────────────────────────────────────────────────
 with st.sidebar:
-    st.markdown(
-        '<div class="section-header">CONSTITUENCY SELECTION</div>',
-        unsafe_allow_html=True
-    )
+    st.markdown('<div class="section-header">CONSTITUENCY SELECTION</div>', unsafe_allow_html=True)
 
     if not GOOGLE_SHEET_URL:
         st.error("GOOGLE_SHEET_URL missing in Streamlit secrets.")
@@ -372,25 +355,27 @@ with st.sidebar:
 
     acs = sorted(
         raw_df[raw_df["District"] == selected_district]["AC Name"]
-        .dropna()
-        .unique()
+        .dropna().unique()
     )
     selected_ac = st.selectbox("Assembly Constituency", acs)
 
-    st.markdown('<div class="section-header">SURVEY INPUTS</div>', unsafe_allow_html=True)
-    survey_bjp    = st.number_input("BJP+ Survey Vote %",    min_value=0.0, max_value=100.0, value=44.0, step=0.5, format="%.1f")
-    survey_sp     = st.number_input("SP+INC Survey Vote %",  min_value=0.0, max_value=100.0, value=38.0, step=0.5, format="%.1f")
-    survey_bsp    = st.number_input("BSP Survey Vote %",     min_value=0.0, max_value=100.0, value=12.0, step=0.5, format="%.1f")
-    survey_rld    = st.number_input("RLD Survey Vote %",     min_value=0.0, max_value=100.0, value=4.0,  step=0.5, format="%.1f")
-    survey_others = st.number_input("Others Survey Vote %",  min_value=0.0, max_value=100.0, value=2.0,  step=0.5, format="%.1f")
+    st.markdown('<div class="section-header">SURVEY INPUTS (BASELINE)</div>', unsafe_allow_html=True)
+    st.caption("Enter field survey data — this is your baseline for all comparisons")
+    survey_bjp    = st.number_input("BJP+ (incl. RLD) Survey %", min_value=0.0, max_value=100.0, value=48.0, step=0.5, format="%.1f")
+    survey_sp     = st.number_input("SP+INC Survey %",          min_value=0.0, max_value=100.0, value=38.0, step=0.5, format="%.1f")
+    survey_bsp    = st.number_input("BSP Survey %",             min_value=0.0, max_value=100.0, value=12.0, step=0.5, format="%.1f")
+    survey_others = st.number_input("Others Survey %",          min_value=0.0, max_value=100.0, value=2.0,  step=0.5, format="%.1f")
 
-    survey_input = {
-        "BJP+": survey_bjp, "SP+INC": survey_sp,
-        "BSP": survey_bsp, "RLD": survey_rld, "Others": survey_others
-    }
+    survey_input = {"BJP+": survey_bjp, "SP+INC": survey_sp, "BSP": survey_bsp, "Others": survey_others}
     survey_total = sum(survey_input.values())
     if abs(survey_total - 100) > 1:
-        st.markdown(f'<div class="warn-box">⚠️ Survey totals {survey_total:.1f}%. Ideally should be 100%.</div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="warn-box">⚠️ Survey totals {survey_total:.1f}%. Ideally 100%.</div>', unsafe_allow_html=True)
+
+    # Normalize survey to exactly 100%
+    if survey_total > 0:
+        survey_norm = {p: round(v * 100 / survey_total, 2) for p, v in survey_input.items()}
+    else:
+        survey_norm = survey_input.copy()
 
     st.markdown('<div class="section-header">TURNOUT ADJUSTMENT</div>', unsafe_allow_html=True)
     apply_turnout = st.toggle("Apply differential turnout", value=False)
@@ -411,20 +396,18 @@ with st.sidebar:
         st.cache_data.clear()
         st.rerun()
 
-# ─── Main Layout ──────────────────────────────────────────────────────────────
+# ─── Main Header ──────────────────────────────────────────────────────────────
 st.markdown("""
 <div class="main-header">
   <h1>🗳️ AC Caste Vote Share Simulator</h1>
-  <p>Constituency-level caste equation modelling · Scenario switching · Vote share projection</p>
+  <p>Constituency caste modelling · Scenario vs Survey comparison · BJP+RLD alliance mode</p>
 </div>
 """, unsafe_allow_html=True)
 
-# ─── Parse & Select AC ────────────────────────────────────────────────────────
+# ─── Data Prep ────────────────────────────────────────────────────────────────
 if raw_df is not None:
-    # Standardise column names
     raw_df.columns = [c.strip() for c in raw_df.columns]
-    # Find caste% column (flexible naming)
-    pct_col = next((c for c in raw_df.columns if "caste %" in c.lower() or "caste%" in c.lower()), None)
+    pct_col   = next((c for c in raw_df.columns if "caste %" in c.lower() or "caste%" in c.lower()), None)
     caste_col = next((c for c in raw_df.columns if "caste (eng)" in c.lower()), None)
     if caste_col is None:
         caste_col = next((c for c in raw_df.columns if c.lower() == "caste" and "local" not in c.lower()), None)
@@ -436,29 +419,28 @@ if raw_df is not None:
             raw_df[pct_col].astype(str).str.replace('%', '', regex=False).str.strip(),
             errors="coerce"
         ).fillna(0)
-        raw_df["Caste"]     = raw_df[caste_col].astype(str).str.strip()
+        raw_df["Caste"] = raw_df[caste_col].astype(str).str.strip()
 
+        # Zone info
         if "AC Zone" in raw_df.columns:
             zone_rows = raw_df[raw_df[ac_col] == selected_ac]
             if len(zone_rows) > 0:
                 st.metric("Zone", zone_rows["AC Zone"].iloc[0])
 
         ac_df = raw_df[raw_df[ac_col] == selected_ac].copy()
-        # Add category if available
         if cat_col:
             ac_df["Category"] = ac_df[cat_col].astype(str)
         else:
             ac_df["Category"] = "OBC"
 
-        # Filter to castes with >0 population
         ac_df = ac_df[ac_df["caste_pct"] > 0].copy()
         ac_df = ac_df.sort_values("caste_pct", ascending=False).reset_index(drop=True)
 
         if ac_df.empty:
-            st.warning(f"⚠️ No caste data with non-zero population found for **{selected_ac}**. Try another constituency.")
+            st.warning(f"⚠️ No caste data found for **{selected_ac}**. Try another constituency.")
             st.stop()
 
-        # Apply turnout adjustment if enabled
+        # Apply turnout
         if apply_turnout and turnout_map and "Category" in ac_df.columns:
             def get_turnout(row):
                 cat = str(row.get("Category", "OBC")).strip().upper()
@@ -476,11 +458,10 @@ if raw_df is not None:
             _te = pd.to_numeric(raw_df[raw_df[ac_col] == selected_ac]["Total Electors [29 May]"], errors="coerce").iloc[0]
             total_electors = int(_te) if pd.notna(_te) else None
 
-        # ─── Build initial splits from default affinity ────────────────────
+        # ─── Build default caste splits ───────────────────────────────────
         caste_splits_base = {}
         for _, row in ac_df.iterrows():
             c = row["Caste"]
-            # Try exact match, then partial
             affinity = DEFAULT_CASTE_PARTY_AFFINITY.get(c)
             if affinity is None:
                 for key in DEFAULT_CASTE_PARTY_AFFINITY:
@@ -490,32 +471,41 @@ if raw_df is not None:
             if affinity is None:
                 cat = str(row.get("Category", "OBC")).upper()
                 if cat == "SC":
-                    affinity = {"BJP+": 25, "SP+INC": 20, "BSP": 45, "RLD": 5, "Others": 5}
+                    affinity = {"BJP+": 30, "SP+INC": 20, "BSP": 45, "Others": 5}
                 elif cat == "ST":
-                    affinity = {"BJP+": 35, "SP+INC": 25, "BSP": 25, "RLD": 5, "Others": 10}
+                    affinity = {"BJP+": 40, "SP+INC": 25, "BSP": 25, "Others": 10}
                 elif cat == "GEN":
-                    affinity = {"BJP+": 55, "SP+INC": 20, "BSP": 10, "RLD": 8, "Others": 7}
+                    affinity = {"BJP+": 60, "SP+INC": 20, "BSP": 10, "Others": 10}
                 elif cat == "MUSLIM":
-                    affinity = {"BJP+": 5, "SP+INC": 75, "BSP": 12, "RLD": 3, "Others": 5}
+                    affinity = {"BJP+": 8,  "SP+INC": 75, "BSP": 12, "Others": 5}
                 else:
-                    affinity = {"BJP+": 40, "SP+INC": 30, "BSP": 20, "RLD": 5, "Others": 5}
+                    affinity = {"BJP+": 45, "SP+INC": 30, "BSP": 20, "Others": 5}
             caste_splits_base[c] = normalize_split(affinity.copy())
+
+        # ─── SINGLE SOURCE OF TRUTH: active_splits in session_state ───────
+        if "active_splits" not in st.session_state:
+            st.session_state["active_splits"] = {k: v.copy() for k, v in caste_splits_base.items()}
+
+        # Convenience: current active splits
+        active_splits = st.session_state["active_splits"]
+
+        # Compute all three vote shares once — used by ALL tabs
+        base_vs     = compute_vote_share(ac_df, caste_splits_base)
+        scenario_vs = compute_vote_share(ac_df, active_splits)
 
         # ─── TABS ─────────────────────────────────────────────────────────
         tab1, tab2, tab3, tab4 = st.tabs([
-            "📊 AC Overview",
+            "📊 AC Overview & Survey",
             "🎛️ Scenario Builder",
             "📈 Impact Analysis",
             "📋 Caste-Party Matrix"
         ])
 
         # ══════════════════════════════════════════════════════════════════
-        # TAB 1 — AC OVERVIEW
+        # TAB 1 — AC OVERVIEW & SURVEY BASELINE
         # ══════════════════════════════════════════════════════════════════
         with tab1:
-            # Metrics row
             m1, m2, m3, m4 = st.columns(4)
-            base_vs = compute_vote_share(ac_df, caste_splits_base)
             with m1:
                 st.markdown(f"""
                 <div class="metric-card">
@@ -533,22 +523,21 @@ if raw_df is not None:
                   <div class="metric-delta delta-pos">{top_caste['caste_pct']:.1f}% of voters</div>
                 </div>""", unsafe_allow_html=True)
             with m3:
-                top_party = max(base_vs, key=base_vs.get)
-                runner_up = sorted(base_vs, key=base_vs.get, reverse=True)[1]
-                margin    = base_vs[top_party] - base_vs[runner_up]
-                color = PARTY_COLORS.get(top_party, "#fff")
+                surv_top = max(survey_norm, key=survey_norm.get)
+                surv_2nd = sorted(survey_norm, key=survey_norm.get, reverse=True)[1]
+                surv_margin = survey_norm[surv_top] - survey_norm[surv_2nd]
+                color = PARTY_COLORS.get(surv_top, "#fff")
                 st.markdown(f"""
                 <div class="metric-card" style="border-left: 4px solid {color};">
-                  <div class="metric-label">Projected Winner (Base)</div>
-                  <div class="metric-value" style="color:{color};font-size:1.4rem">{top_party}</div>
-                  <div class="metric-delta delta-pos">+{margin:.1f}% margin</div>
+                  <div class="metric-label">Survey Leader</div>
+                  <div class="metric-value" style="color:{color};font-size:1.4rem">{surv_top}</div>
+                  <div class="metric-delta delta-pos">+{surv_margin:.1f}% margin</div>
                 </div>""", unsafe_allow_html=True)
             with m4:
-                n_castes = len(ac_df)
                 st.markdown(f"""
                 <div class="metric-card">
                   <div class="metric-label">Caste Groups</div>
-                  <div class="metric-value">{n_castes}</div>
+                  <div class="metric-value">{len(ac_df)}</div>
                   <div class="metric-delta delta-neu">With non-zero population</div>
                 </div>""", unsafe_allow_html=True)
 
@@ -556,11 +545,8 @@ if raw_df is not None:
             col_chart, col_table = st.columns([5, 4])
 
             with col_chart:
-                # Treemap of caste composition
                 fig_tree = px.treemap(
-                    ac_df,
-                    path=["Category", "Caste"],
-                    values="caste_pct",
+                    ac_df, path=["Category", "Caste"], values="caste_pct",
                     color="caste_pct",
                     color_continuous_scale=["#0d1117", "#1f6feb", "#79c0ff"],
                     title=f"Caste Composition — {selected_ac} AC",
@@ -569,106 +555,81 @@ if raw_df is not None:
                     paper_bgcolor="#161b22", plot_bgcolor="#161b22",
                     font=dict(family="IBM Plex Sans", color="#e6edf3"),
                     title_font=dict(family="Rajdhani", size=16, color="#79c0ff"),
-                    margin=dict(t=40, l=0, r=0, b=0),
-                    height=380,
+                    margin=dict(t=40, l=0, r=0, b=0), height=380,
                     coloraxis_showscale=False,
                 )
                 fig_tree.update_traces(
                     textfont=dict(family="IBM Plex Sans", color="white"),
                     marker=dict(line=dict(width=2, color="#0d1117"))
                 )
-                st.plotly_chart(fig_tree, width="stretch")
+                st.plotly_chart(fig_tree, width="stretch", key="tab1_treemap")
 
             with col_table:
                 display_df = ac_df[["Caste", "Category", "caste_pct"]].copy()
                 display_df.columns = ["Caste", "Category", "Share %"]
                 display_df["Share %"] = display_df["Share %"].apply(lambda x: f"{x:.2f}%")
-                st.dataframe(
-                    display_df,
-                    width="stretch",
-                    hide_index=True,
-                    height=380,
-                )
+                st.dataframe(display_df, width="stretch", hide_index=True, height=380)
 
-            st.markdown('<div class="section-header">BASE SCENARIO: PROJECTED VOTE SHARE</div>', unsafe_allow_html=True)
-            # Bar chart
+            # Survey vs Model bar chart
+            st.markdown('<div class="section-header">SURVEY BASELINE vs CASTE MODEL vs SCENARIO</div>', unsafe_allow_html=True)
             fig_bar = go.Figure()
-            parties_sorted = sorted(base_vs, key=base_vs.get, reverse=True)
-            for p in parties_sorted:
-                col = PARTY_COLORS.get(p, "#888")
+            for trace_name, trace_data, opacity, pattern in [
+                ("Survey (Baseline)", survey_norm, 1.0, None),
+                ("Caste Model (Default)", base_vs, 0.5, None),
+                ("Scenario (Your Edits)", scenario_vs, 0.8, dict(shape="/", size=6, solidity=0.3)),
+            ]:
                 fig_bar.add_trace(go.Bar(
-                    x=[p], y=[base_vs[p]],
-                    marker_color=col,
-                    text=[f"{base_vs[p]:.1f}%"],
+                    x=PARTIES,
+                    y=[trace_data.get(p, 0) for p in PARTIES],
+                    name=trace_name,
+                    marker_color=[PARTY_COLORS[p] for p in PARTIES],
+                    marker_pattern=pattern, opacity=opacity,
+                    text=[f"{trace_data.get(p,0):.1f}%" for p in PARTIES],
                     textposition="outside",
-                    textfont=dict(family="Rajdhani", size=16, color=col),
-                    name=p,
-                ))
-            # Survey comparison
-            for p in parties_sorted:
-                col = PARTY_COLORS.get(p, "#888")
-                fig_bar.add_trace(go.Bar(
-                    x=[p], y=[survey_input.get(p, 0)],
-                    marker_color=col, opacity=0.3,
-                    marker_line=dict(color=col, width=2),
-                    text=[f"Survey: {survey_input.get(p,0):.1f}%"],
-                    textposition="outside",
-                    textfont=dict(family="Rajdhani", size=12, color="#8b949e"),
-                    name=f"{p} (Survey)",
-                    showlegend=True,
+                    textfont=dict(family="Rajdhani", size=12),
                 ))
             fig_bar.update_layout(
+                barmode="group",
                 paper_bgcolor="#161b22", plot_bgcolor="#161b22",
                 font=dict(family="IBM Plex Sans", color="#e6edf3"),
-                barmode="group",
-                showlegend=False,
                 xaxis=dict(showgrid=False, tickfont=dict(family="Rajdhani", size=14)),
                 yaxis=dict(showgrid=True, gridcolor="#30363d", range=[0, 100],
                            ticksuffix="%", tickfont=dict(family="IBM Plex Mono")),
-                margin=dict(t=20, l=0, r=0, b=0),
-                height=280,
+                legend=dict(font=dict(family="Rajdhani", size=12), orientation="h",
+                            yanchor="bottom", y=1.02, xanchor="center", x=0.5),
+                margin=dict(t=60, l=0, r=0, b=0), height=300,
             )
-            st.plotly_chart(fig_bar, width="stretch")
+            st.plotly_chart(fig_bar, width="stretch", key="tab1_3way_bar")
 
         # ══════════════════════════════════════════════════════════════════
         # TAB 2 — SCENARIO BUILDER
         # ══════════════════════════════════════════════════════════════════
         with tab2:
-            st.markdown('<div class="info-box">💡 Adjust how each caste splits its vote between parties. The simulator will instantly recompute the projected vote share and show you the delta vs the base scenario.</div>', unsafe_allow_html=True)
+            st.markdown('<div class="info-box">💡 Adjust caste vote splits below. Changes apply to <b>all tabs</b> instantly. Compare your scenario against the <b>survey baseline</b> at the bottom.</div>', unsafe_allow_html=True)
 
-            # Build editable splits in session state
-            if "modified_splits" not in st.session_state:
-                st.session_state["modified_splits"] = {k: v.copy() for k, v in caste_splits_base.items()}
-
-            # Filter selector
             filter_cat = st.multiselect(
                 "Filter castes by category:",
                 options=["All"] + sorted(ac_df["Category"].unique().tolist()),
-                default=["All"]
+                default=["All"], key="tab2_filter"
             )
             show_all = "All" in filter_cat or not filter_cat
             cats_to_show = ac_df["Category"].unique() if show_all else filter_cat
-
             filtered_df = ac_df[ac_df["Category"].isin(cats_to_show)].copy()
-
-            scenario_splits = {k: v.copy() for k, v in caste_splits_base.items()}
 
             for _, row in filtered_df.iterrows():
                 caste = row["Caste"]
                 cpct  = row["caste_pct"]
                 cat   = row.get("Category", "")
-                cur   = st.session_state["modified_splits"].get(caste, caste_splits_base.get(caste, {}))
+                cur   = active_splits.get(caste, caste_splits_base.get(caste, {}))
 
                 with st.expander(f"🔹 **{caste}** ({cat}) — {cpct:.2f}% of AC voters", expanded=cpct > 10):
-                    ec1, ec2, ec3, ec4, ec5 = st.columns(5)
+                    ec1, ec2, ec3, ec4 = st.columns(4)
                     new_split = {}
-                    cols_exp = [ec1, ec2, ec3, ec4, ec5]
+                    cols_exp = [ec1, ec2, ec3, ec4]
                     for i, party in enumerate(PARTIES):
                         with cols_exp[i]:
-                            pcol = PARTY_COLORS[party]
                             val = st.number_input(
-                                f"{party}",
-                                min_value=0.0, max_value=100.0,
+                                f"{party}", min_value=0.0, max_value=100.0,
                                 value=float(cur.get(party, 0)),
                                 step=1.0, format="%.1f",
                                 key=f"split_{caste}_{party}"
@@ -677,21 +638,17 @@ if raw_df is not None:
 
                     split_total = sum(new_split.values())
                     if abs(split_total - 100) > 0.5:
-                        st.warning(f"⚠️ Split totals {split_total:.1f}% — will be normalized to 100%")
+                        st.warning(f"⚠️ Split totals {split_total:.1f}% — will normalize to 100%")
                     normalized = normalize_split(new_split)
-                    st.session_state["modified_splits"][caste] = normalized
-                    scenario_splits[caste] = normalized
+                    st.session_state["active_splits"][caste] = normalized
 
-                    # Mini visualization inside expander
                     mini_fig = go.Figure()
                     for party in PARTIES:
                         mini_fig.add_trace(go.Bar(
-                            x=[party],
-                            y=[normalized.get(party, 0)],
+                            x=[party], y=[normalized.get(party, 0)],
                             marker_color=PARTY_COLORS[party],
                             text=[f"{normalized.get(party,0):.0f}%"],
-                            textposition="outside",
-                            textfont=dict(size=10)
+                            textposition="outside", textfont=dict(size=10)
                         ))
                     mini_fig.update_layout(
                         paper_bgcolor="#1c2333", plot_bgcolor="#1c2333",
@@ -702,318 +659,245 @@ if raw_df is not None:
                     )
                     st.plotly_chart(mini_fig, width="stretch", key=f"mini_{caste}")
 
-            # ── Quick Swing Simulator ─────────────────────────────────────
+            # Quick Swing
             st.markdown('<div class="section-header">QUICK SWING SIMULATOR</div>', unsafe_allow_html=True)
-
-            swing_caste = st.selectbox("Caste", filtered_df["Caste"].tolist())
-            from_party  = st.selectbox("From Party", PARTIES)
-            to_party    = st.selectbox("To Party", PARTIES, index=1)
-            swing_pct   = st.slider("Vote Shift %", 0, 20, 5)
+            swing_caste = st.selectbox("Caste", filtered_df["Caste"].tolist(), key="swing_caste")
+            from_party  = st.selectbox("From Party", PARTIES, key="swing_from")
+            to_party    = st.selectbox("To Party", PARTIES, index=1, key="swing_to")
+            swing_pct   = st.slider("Vote Shift %", 0, 20, 5, key="swing_pct")
 
             if st.button("Apply Swing"):
-                split = st.session_state["modified_splits"][swing_caste]
-                split[from_party] = max(0, split[from_party] - swing_pct)
-                split[to_party] += swing_pct
-                split = normalize_split(split)
-                st.session_state["modified_splits"][swing_caste] = split
-                st.success(f"{swing_pct}% shifted {from_party} → {to_party}")
+                sp = st.session_state["active_splits"][swing_caste].copy()
+                sp[from_party] = max(0, sp[from_party] - swing_pct)
+                sp[to_party]  += swing_pct
+                st.session_state["active_splits"][swing_caste] = normalize_split(sp)
+                st.success(f"{swing_pct}% shifted {from_party} → {to_party} for {swing_caste}")
 
-            # ── Result comparison ─────────────────────────────────────────
-            scenario_vs = compute_vote_share(ac_df, scenario_splits)
+            # ── RESULTS: Scenario vs Survey ───────────────────────────────
+            scenario_vs = compute_vote_share(ac_df, st.session_state["active_splits"])
 
-            # Normalize survey input to 100% for fair comparison
-            surv_total = sum(survey_input.values())
-            if surv_total > 0:
-                survey_norm = {p: round(v * 100 / surv_total, 2) for p, v in survey_input.items()}
-            else:
-                survey_norm = survey_input.copy()
-
-            # ── 3-WAY METRIC CARDS: Base / Scenario / Survey ──────────────
-            st.markdown('<div class="section-header">SCENARIO vs BASE vs SURVEY</div>', unsafe_allow_html=True)
-            rcols = st.columns(5)
+            st.markdown('<div class="section-header">SCENARIO RESULT vs SURVEY BASELINE</div>', unsafe_allow_html=True)
+            rcols = st.columns(len(PARTIES))
             for i, party in enumerate(PARTIES):
-                base_val = base_vs.get(party, 0)
-                scen_val = scenario_vs.get(party, 0)
-                surv_val = survey_norm.get(party, 0)
-                delta_base = scen_val - base_val
-                delta_surv = scen_val - surv_val
-                db_class = "delta-pos" if delta_base > 0 else ("delta-neg" if delta_base < 0 else "delta-neu")
-                ds_class = "delta-pos" if delta_surv > 0 else ("delta-neg" if delta_surv < 0 else "delta-neu")
-                db_sign  = "+" if delta_base > 0 else ""
-                ds_sign  = "+" if delta_surv > 0 else ""
+                sv   = survey_norm.get(party, 0)
+                sc   = scenario_vs.get(party, 0)
+                d    = sc - sv
+                dc   = "delta-pos" if d > 0 else ("delta-neg" if d < 0 else "delta-neu")
+                ds   = "+" if d > 0 else ""
                 pcol = PARTY_COLORS[party]
                 with rcols[i]:
                     st.markdown(f"""
                     <div class="metric-card" style="border-left: 4px solid {pcol};">
                       <div class="metric-label">{party}</div>
-                      <div class="metric-value" style="color:{pcol}">{scen_val:.1f}%</div>
-                      <div class="metric-delta {db_class}">{db_sign}{delta_base:.1f}% vs base ({base_val:.1f}%)</div>
-                      <div class="metric-delta {ds_class}">{ds_sign}{delta_surv:.1f}% vs survey ({surv_val:.1f}%)</div>
+                      <div class="metric-value" style="color:{pcol}">{sc:.1f}%</div>
+                      <div class="metric-delta {dc}">{ds}{d:.1f}% vs survey ({sv:.1f}%)</div>
                     </div>""", unsafe_allow_html=True)
 
-            # ── Winner analysis ───────────────────────────────────────────
+            # Winner analysis
             scen_top = max(scenario_vs, key=scenario_vs.get)
+            surv_top = max(survey_norm, key=survey_norm.get)
             scen_2nd = sorted(scenario_vs, key=scenario_vs.get, reverse=True)[1]
             scen_margin = scenario_vs[scen_top] - scenario_vs[scen_2nd]
-            base_top = max(base_vs, key=base_vs.get)
-            surv_top = max(survey_norm, key=survey_norm.get)
 
-            if scen_top != base_top:
-                st.markdown(f"""
-                <div class="warn-box">
-                🔄 <b>SEAT FLIP vs BASE!</b> Base winner: <b>{base_top}</b> ({base_vs[base_top]:.1f}%)
-                → Scenario winner: <b>{scen_top}</b> ({scenario_vs[scen_top]:.1f}%). Margin: {scen_margin:.1f}%.
-                </div>""", unsafe_allow_html=True)
             if scen_top != surv_top:
                 st.markdown(f"""
                 <div class="warn-box">
-                ⚠️ <b>SCENARIO ≠ SURVEY!</b> Survey predicts <b>{surv_top}</b> ({survey_norm[surv_top]:.1f}%)
-                but caste model predicts <b>{scen_top}</b> ({scenario_vs[scen_top]:.1f}%).
+                🔄 <b>SCENARIO ≠ SURVEY!</b> Survey says <b>{surv_top}</b> ({survey_norm[surv_top]:.1f}%)
+                but your caste scenario predicts <b>{scen_top}</b> ({scenario_vs[scen_top]:.1f}%). Margin: {scen_margin:.1f}%.
                 </div>""", unsafe_allow_html=True)
-            if scen_top == base_top and scen_top == surv_top:
+            else:
                 st.markdown(f"""
                 <div class="info-box">
-                ✅ All three agree: <b>{scen_top}</b> wins. Scenario margin vs {scen_2nd}: <b>{scen_margin:.1f}%</b>.
+                ✅ Scenario agrees with survey: <b>{scen_top}</b> wins. Margin: <b>{scen_margin:.1f}%</b>.
                 </div>""", unsafe_allow_html=True)
 
-            # ── 3-WAY GROUPED BAR CHART ───────────────────────────────────
-            st.markdown('<div class="section-header">BASE vs SCENARIO vs SURVEY — COMPARISON</div>', unsafe_allow_html=True)
-            fig_comp = go.Figure()
-            for trace_name, trace_data, opacity, pattern in [
-                ("Base (Caste Model)", base_vs, 0.45, None),
-                ("Scenario (Modified)", scenario_vs, 1.0, None),
-                ("Survey (Field Data)", survey_norm, 0.7, dict(shape="/", size=6, solidity=0.3)),
-            ]:
-                fig_comp.add_trace(go.Bar(
-                    x=PARTIES,
-                    y=[trace_data.get(p, 0) for p in PARTIES],
-                    name=trace_name,
-                    marker_color=[PARTY_COLORS[p] for p in PARTIES],
-                    marker_pattern=pattern,
-                    opacity=opacity,
-                    text=[f"{trace_data.get(p, 0):.1f}%" for p in PARTIES],
-                    textposition="outside",
-                    textfont=dict(family="Rajdhani", size=11),
-                ))
-            fig_comp.update_layout(
-                barmode="group",
-                paper_bgcolor="#161b22", plot_bgcolor="#161b22",
-                font=dict(family="IBM Plex Sans", color="#e6edf3"),
-                title=dict(text="Three-Way Vote Share Comparison", font=dict(family="Rajdhani", color="#79c0ff", size=15)),
-                xaxis=dict(showgrid=False, tickfont=dict(family="Rajdhani", size=14)),
-                yaxis=dict(showgrid=True, gridcolor="#30363d", range=[0, 100],
-                           ticksuffix="%", tickfont=dict(family="IBM Plex Mono")),
-                legend=dict(font=dict(family="Rajdhani", size=12), orientation="h",
-                            yanchor="bottom", y=1.02, xanchor="center", x=0.5),
-                margin=dict(t=60, l=0, r=0, b=0),
-                height=340,
-            )
-            st.plotly_chart(fig_comp, width="stretch", key="fig_3way_comp")
-
-            # ── RADAR: Base vs Scenario vs Survey ─────────────────────────
+            # Charts
             col_rl, col_rr = st.columns(2)
             with col_rl:
-                cats_radar  = PARTIES
-                base_vals   = [base_vs.get(p, 0) for p in PARTIES]
-                scen_vals   = [scenario_vs.get(p, 0) for p in PARTIES]
-                surv_vals   = [survey_norm.get(p, 0) for p in PARTIES]
-                fig_radar   = go.Figure()
+                surv_vals = [survey_norm.get(p, 0) for p in PARTIES]
+                scen_vals = [scenario_vs.get(p, 0) for p in PARTIES]
+                fig_radar = go.Figure()
                 fig_radar.add_trace(go.Scatterpolar(
-                    r=base_vals + [base_vals[0]],
-                    theta=cats_radar + [cats_radar[0]],
-                    fill="toself", name="Base",
-                    line=dict(color="#79c0ff"), fillcolor="rgba(121,192,255,0.10)"
-                ))
-                fig_radar.add_trace(go.Scatterpolar(
-                    r=scen_vals + [scen_vals[0]],
-                    theta=cats_radar + [cats_radar[0]],
-                    fill="toself", name="Scenario",
-                    line=dict(color="#f78166"), fillcolor="rgba(247,129,102,0.10)"
-                ))
-                fig_radar.add_trace(go.Scatterpolar(
-                    r=surv_vals + [surv_vals[0]],
-                    theta=cats_radar + [cats_radar[0]],
+                    r=surv_vals + [surv_vals[0]], theta=PARTIES + [PARTIES[0]],
                     fill="toself", name="Survey",
-                    line=dict(color="#56d364", dash="dash"), fillcolor="rgba(86,211,100,0.08)"
+                    line=dict(color="#56d364"), fillcolor="rgba(86,211,100,0.12)"
+                ))
+                fig_radar.add_trace(go.Scatterpolar(
+                    r=scen_vals + [scen_vals[0]], theta=PARTIES + [PARTIES[0]],
+                    fill="toself", name="Scenario",
+                    line=dict(color="#f78166"), fillcolor="rgba(247,129,102,0.12)"
                 ))
                 fig_radar.update_layout(
-                    polar=dict(
-                        bgcolor="#1c2333",
-                        radialaxis=dict(visible=True, range=[0, 80], color="#8b949e"),
-                        angularaxis=dict(color="#e6edf3")
-                    ),
+                    polar=dict(bgcolor="#1c2333",
+                               radialaxis=dict(visible=True, range=[0, 80], color="#8b949e"),
+                               angularaxis=dict(color="#e6edf3")),
                     paper_bgcolor="#161b22",
                     font=dict(family="IBM Plex Sans", color="#e6edf3"),
                     legend=dict(font=dict(family="Rajdhani")),
-                    title=dict(text="Base vs Scenario vs Survey — Radar", font=dict(family="Rajdhani", color="#79c0ff", size=14)),
-                    margin=dict(t=40, l=20, r=20, b=20),
-                    height=340,
+                    title=dict(text="Survey vs Scenario — Radar", font=dict(family="Rajdhani", color="#79c0ff", size=14)),
+                    margin=dict(t=40, l=20, r=20, b=20), height=340,
                 )
-                st.plotly_chart(fig_radar, width="stretch", key="fig_radar_3way")
+                st.plotly_chart(fig_radar, width="stretch", key="tab2_radar")
 
             with col_rr:
-                # Gap chart: Scenario vs Survey
-                gap_data = {p: scenario_vs.get(p, 0) - survey_norm.get(p, 0) for p in PARTIES}
-                fig_gap  = go.Figure(go.Bar(
-                    x=PARTIES,
-                    y=list(gap_data.values()),
-                    marker_color=["#56d364" if v >= 0 else "#f78166" for v in gap_data.values()],
-                    text=[f"{'+' if v >= 0 else ''}{v:.1f}%" for v in gap_data.values()],
-                    textposition="outside",
-                    textfont=dict(family="Rajdhani", size=13),
+                gap = {p: scenario_vs.get(p,0) - survey_norm.get(p,0) for p in PARTIES}
+                fig_gap = go.Figure(go.Bar(
+                    x=PARTIES, y=list(gap.values()),
+                    marker_color=["#56d364" if v >= 0 else "#f78166" for v in gap.values()],
+                    text=[f"{'+' if v>=0 else ''}{v:.1f}%" for v in gap.values()],
+                    textposition="outside", textfont=dict(family="Rajdhani", size=13),
                 ))
                 fig_gap.update_layout(
                     paper_bgcolor="#161b22", plot_bgcolor="#161b22",
                     title=dict(text="Scenario − Survey Gap", font=dict(family="Rajdhani", color="#e3b341", size=14)),
                     font=dict(family="IBM Plex Sans", color="#e6edf3"),
                     yaxis=dict(showgrid=True, gridcolor="#30363d", ticksuffix="%",
-                               zeroline=True, zerolinecolor="#8b949e", zerolinewidth=1,
-                               tickfont=dict(family="IBM Plex Mono")),
+                               zeroline=True, zerolinecolor="#8b949e"),
                     xaxis=dict(showgrid=False, tickfont=dict(family="Rajdhani", size=13)),
-                    margin=dict(t=40, l=0, r=0, b=0),
-                    height=340,
+                    margin=dict(t=40, l=0, r=0, b=0), height=340,
                 )
-                st.plotly_chart(fig_gap, width="stretch", key="fig_gap_surv")
+                st.plotly_chart(fig_gap, width="stretch", key="tab2_gap")
 
-            # ── DETAILED COMPARISON TABLE ─────────────────────────────────
-            st.markdown('<div class="section-header">DETAILED COMPARISON TABLE</div>', unsafe_allow_html=True)
+            # Comparison table
+            st.markdown('<div class="section-header">DETAILED COMPARISON</div>', unsafe_allow_html=True)
             comp_rows = []
             for p in PARTIES:
-                b = base_vs.get(p, 0)
-                s = scenario_vs.get(p, 0)
                 sv = survey_norm.get(p, 0)
+                sc = scenario_vs.get(p, 0)
+                bv = base_vs.get(p, 0)
                 comp_rows.append({
                     "Party": p,
-                    "Base %": f"{b:.1f}",
-                    "Scenario %": f"{s:.1f}",
                     "Survey %": f"{sv:.1f}",
-                    "Scen vs Base": f"{'+' if s-b >= 0 else ''}{s-b:.1f}",
-                    "Scen vs Survey": f"{'+' if s-sv >= 0 else ''}{s-sv:.1f}",
-                    "Survey vs Base": f"{'+' if sv-b >= 0 else ''}{sv-b:.1f}",
+                    "Scenario %": f"{sc:.1f}",
+                    "Caste Model %": f"{bv:.1f}",
+                    "Scenario vs Survey": f"{'+' if sc-sv>=0 else ''}{sc-sv:.1f}",
+                    "Scenario vs Model": f"{'+' if sc-bv>=0 else ''}{sc-bv:.1f}",
                 })
-            comp_df = pd.DataFrame(comp_rows)
-            st.dataframe(comp_df, width="stretch", hide_index=True, key="tbl_3way")
+            st.dataframe(pd.DataFrame(comp_rows), width="stretch", hide_index=True, key="tab2_table")
 
         # ══════════════════════════════════════════════════════════════════
-        # TAB 3 — IMPACT ANALYSIS
+        # TAB 3 — IMPACT ANALYSIS (uses active_splits, compares to survey)
         # ══════════════════════════════════════════════════════════════════
         with tab3:
             st.markdown('<div class="section-header">CASTE IMPACT ON EACH PARTY</div>', unsafe_allow_html=True)
-            st.markdown('<div class="info-box">This tab shows how much each caste contributes to a party\'s vote share (Base scenario), and how much it swings under the current scenario. Select a party to analyze:</div>', unsafe_allow_html=True)
+            st.markdown('<div class="info-box">Shows each caste\'s contribution using your <b>current scenario splits</b>, compared against the <b>survey baseline</b>.</div>', unsafe_allow_html=True)
 
-            focus_party = st.selectbox("Analyze impact for party:", PARTIES, index=0)
+            focus_party = st.selectbox("Analyze impact for party:", PARTIES, index=0, key="tab3_party")
+
+            # Recompute scenario from active_splits (reflects Tab 2 edits)
+            scenario_vs = compute_vote_share(ac_df, st.session_state["active_splits"])
 
             impact_rows = []
             for _, row in ac_df.iterrows():
-                caste    = row["Caste"]
-                cpct     = row["caste_pct"]
-                base_sp  = caste_splits_base.get(caste, {}).get(focus_party, 0)
-                scen_sp  = st.session_state["modified_splits"].get(caste, caste_splits_base.get(caste, {})).get(focus_party, 0)
-                base_contrib  = (cpct / 100) * base_sp
-                scen_contrib  = (cpct / 100) * scen_sp
-                swing         = scen_contrib - base_contrib
+                caste = row["Caste"]
+                cpct  = row["caste_pct"]
+                scen_sp = st.session_state["active_splits"].get(caste, caste_splits_base.get(caste, {})).get(focus_party, 0)
+                base_sp = caste_splits_base.get(caste, {}).get(focus_party, 0)
+                scen_contrib = (cpct / 100) * scen_sp
+                base_contrib = (cpct / 100) * base_sp
+                swing = scen_contrib - base_contrib
                 impact_rows.append({
-                    "Caste":      caste,
-                    "Caste %":    cpct,
-                    "Base Split": base_sp,
-                    "Scen Split": scen_sp,
-                    "Base Contrib": round(base_contrib, 2),
-                    "Scen Contrib": round(scen_contrib, 2),
-                    "Swing":      round(swing, 2),
+                    "Caste": caste, "Caste %": cpct,
+                    "Default Split": base_sp, "Scenario Split": scen_sp,
+                    "Default Contrib": round(base_contrib, 2),
+                    "Scenario Contrib": round(scen_contrib, 2),
+                    "Swing": round(swing, 2),
                 })
 
-            impact_df = pd.DataFrame(impact_rows).sort_values("Base Contrib", ascending=False)
-
-            # Visual impact bars
+            impact_df = pd.DataFrame(impact_rows).sort_values("Scenario Contrib", ascending=False)
             pcol_focus = PARTY_COLORS.get(focus_party, "#79c0ff")
 
             for _, irow in impact_df.iterrows():
-                bc   = irow["Base Contrib"]
-                sc   = irow["Scen Contrib"]
-                sw   = irow["Swing"]
-                max_c = impact_df["Base Contrib"].max() or 1
-                bar_w = int((bc / max_c) * 100)
+                sc  = irow["Scenario Contrib"]
+                sw  = irow["Swing"]
+                max_c = impact_df["Scenario Contrib"].max() or 1
+                bar_w = int((sc / max_c) * 100) if max_c > 0 else 0
                 sw_class = "delta-pos" if sw > 0 else ("delta-neg" if sw < 0 else "delta-neu")
-                sw_str   = f"+{sw:.2f}" if sw > 0 else f"{sw:.2f}"
+                sw_str = f"+{sw:.2f}" if sw > 0 else f"{sw:.2f}"
                 st.markdown(f"""
                 <div class="impact-bar-wrap">
                   <div class="impact-bar-label">
-                    <span><b>{irow['Caste']}</b> <span style="color:#8b949e;font-size:0.78rem">({irow['Caste %']:.1f}% of AC | base split {irow['Base Split']:.0f}% → scen {irow['Scen Split']:.0f}%)</span></span>
-                    <span>Base: <b>{bc:.2f}pp</b> &nbsp; Swing: <span class="{sw_class}"><b>{sw_str}pp</b></span></span>
+                    <span><b>{irow['Caste']}</b> <span style="color:#8b949e;font-size:0.78rem">({irow['Caste %']:.1f}% of AC | default {irow['Default Split']:.0f}% → scenario {irow['Scenario Split']:.0f}%)</span></span>
+                    <span>Contrib: <b>{sc:.2f}pp</b> &nbsp; Swing: <span class="{sw_class}"><b>{sw_str}pp</b></span></span>
                   </div>
                   <div class="impact-bar-bg">
                     <div class="impact-bar-fill" style="width:{bar_w}%;background:{pcol_focus};opacity:0.85"></div>
                   </div>
                 </div>""", unsafe_allow_html=True)
 
-            # Tornado chart — biggest swingers
-            st.markdown('<div class="section-header">SWING TORNADO — TOP MOVERS FOR {}</div>'.format(focus_party), unsafe_allow_html=True)
+            # Tornado
+            st.markdown(f'<div class="section-header">SWING TORNADO — TOP MOVERS FOR {focus_party}</div>', unsafe_allow_html=True)
             tornado_df = impact_df.sort_values("Swing", key=abs, ascending=False).head(10)
-
             fig_tornado = go.Figure()
             fig_tornado.add_trace(go.Bar(
-                y=tornado_df["Caste"],
-                x=tornado_df["Swing"],
-                orientation="h",
+                y=tornado_df["Caste"], x=tornado_df["Swing"], orientation="h",
                 marker_color=[pcol_focus if v >= 0 else "#f78166" for v in tornado_df["Swing"]],
-                text=[f"{'+' if v >= 0 else ''}{v:.2f}pp" for v in tornado_df["Swing"]],
-                textposition="outside",
-                textfont=dict(family="Rajdhani", size=12),
+                text=[f"{'+' if v>=0 else ''}{v:.2f}pp" for v in tornado_df["Swing"]],
+                textposition="outside", textfont=dict(family="Rajdhani", size=12),
             ))
             fig_tornado.update_layout(
                 paper_bgcolor="#161b22", plot_bgcolor="#161b22",
                 font=dict(family="IBM Plex Sans", color="#e6edf3"),
-                title=dict(text=f"Top 10 Caste Swing Drivers for {focus_party}", font=dict(family="Rajdhani", color=pcol_focus, size=15)),
-                xaxis=dict(showgrid=True, gridcolor="#30363d", zeroline=True,
-                           zerolinecolor="#8b949e", ticksuffix="pp",
-                           tickfont=dict(family="IBM Plex Mono")),
+                title=dict(text=f"Top Caste Swing Drivers for {focus_party}", font=dict(family="Rajdhani", color=pcol_focus, size=15)),
+                xaxis=dict(showgrid=True, gridcolor="#30363d", zeroline=True, zerolinecolor="#8b949e", ticksuffix="pp"),
                 yaxis=dict(showgrid=False, tickfont=dict(family="IBM Plex Sans", size=12)),
-                margin=dict(t=40, l=0, r=60, b=0),
-                height=380,
+                margin=dict(t=40, l=0, r=60, b=0), height=380,
             )
-            st.plotly_chart(fig_tornado, width="stretch")
+            st.plotly_chart(fig_tornado, width="stretch", key="tab3_tornado")
 
-            # Caste contribution stacked chart
-            st.markdown('<div class="section-header">CASTE CONTRIBUTION TO EACH PARTY</div>', unsafe_allow_html=True)
+            # Stacked contribution (scenario splits)
+            st.markdown('<div class="section-header">CASTE CONTRIBUTION TO EACH PARTY (SCENARIO)</div>', unsafe_allow_html=True)
             contrib_fig = go.Figure()
             for party in PARTIES:
                 contribs = []
                 for _, row in ac_df.iterrows():
                     c = row["Caste"]
-                    sp = caste_splits_base.get(c, {}).get(party, 0)
+                    sp = st.session_state["active_splits"].get(c, caste_splits_base.get(c, {})).get(party, 0)
                     contribs.append((row["caste_pct"] / 100) * sp)
                 contrib_fig.add_trace(go.Bar(
-                    name=party,
-                    x=ac_df["Caste"].tolist(),
-                    y=contribs,
+                    name=party, x=ac_df["Caste"].tolist(), y=contribs,
                     marker_color=PARTY_COLORS[party],
                 ))
             contrib_fig.update_layout(
                 barmode="stack",
                 paper_bgcolor="#161b22", plot_bgcolor="#161b22",
                 font=dict(family="IBM Plex Sans", color="#e6edf3"),
-                title=dict(text="Caste-wise Vote Contribution to Each Party (Base)", font=dict(family="Rajdhani", color="#79c0ff", size=14)),
+                title=dict(text="Caste-wise Vote Contribution (Scenario Splits)", font=dict(family="Rajdhani", color="#79c0ff", size=14)),
                 xaxis=dict(showgrid=False, tickangle=-35, tickfont=dict(family="IBM Plex Sans", size=10)),
-                yaxis=dict(showgrid=True, gridcolor="#30363d", ticksuffix="pp",
-                           tickfont=dict(family="IBM Plex Mono")),
+                yaxis=dict(showgrid=True, gridcolor="#30363d", ticksuffix="pp"),
                 legend=dict(font=dict(family="Rajdhani")),
-                margin=dict(t=40, l=0, r=0, b=80),
-                height=380,
+                margin=dict(t=40, l=0, r=0, b=80), height=380,
             )
-            st.plotly_chart(contrib_fig, width="stretch")
+            st.plotly_chart(contrib_fig, width="stretch", key="tab3_contrib")
+
+            # Survey vs Scenario summary for this tab
+            st.markdown('<div class="section-header">SCENARIO vs SURVEY SUMMARY</div>', unsafe_allow_html=True)
+            sum_cols = st.columns(len(PARTIES))
+            for i, p in enumerate(PARTIES):
+                sv = survey_norm.get(p, 0)
+                sc = scenario_vs.get(p, 0)
+                d  = sc - sv
+                dc = "delta-pos" if d > 0 else ("delta-neg" if d < 0 else "delta-neu")
+                with sum_cols[i]:
+                    st.markdown(f"""
+                    <div class="metric-card" style="border-left:4px solid {PARTY_COLORS[p]}">
+                      <div class="metric-label">{p}</div>
+                      <div class="metric-value" style="color:{PARTY_COLORS[p]}">{sc:.1f}%</div>
+                      <div class="metric-delta {dc}">Survey: {sv:.1f}% | Gap: {'+' if d>=0 else ''}{d:.1f}%</div>
+                    </div>""", unsafe_allow_html=True)
 
         # ══════════════════════════════════════════════════════════════════
-        # TAB 4 — CASTE-PARTY MATRIX
+        # TAB 4 — CASTE-PARTY MATRIX (uses active_splits)
         # ══════════════════════════════════════════════════════════════════
         with tab4:
-            st.markdown('<div class="section-header">CASTE–PARTY AFFINITY MATRIX</div>', unsafe_allow_html=True)
-            st.markdown('<div class="info-box">Heatmap shows base caste split %. Darker = stronger affinity. Castes with >5% population are highlighted as "dominant."</div>', unsafe_allow_html=True)
+            st.markdown('<div class="section-header">CASTE–PARTY AFFINITY MATRIX (SCENARIO)</div>', unsafe_allow_html=True)
+            st.markdown('<div class="info-box">Heatmap reflects your <b>current scenario splits</b> — edits in Tab 2 update here instantly.</div>', unsafe_allow_html=True)
 
             matrix_rows = []
             for _, row in ac_df.iterrows():
                 c    = row["Caste"]
                 cpct = row["caste_pct"]
-                sp   = caste_splits_base.get(c, {})
+                sp   = st.session_state["active_splits"].get(c, caste_splits_base.get(c, {}))
                 matrix_rows.append({
                     "Caste": f"{c} ({cpct:.1f}%)" if cpct >= 1 else c,
                     **{p: sp.get(p, 0) for p in PARTIES}
@@ -1026,30 +910,26 @@ if raw_df is not None:
                 x=matrix_df.columns.tolist(),
                 y=matrix_df.index.tolist(),
                 colorscale=[[0, "#0d1117"], [0.3, "#1f3a5f"], [0.6, "#1f6feb"], [1.0, "#79c0ff"]],
-                text=[[f"{v:.0f}%" for v in row] for row in matrix_df.values],
+                text=[[f"{v:.0f}%" for v in r] for r in matrix_df.values],
                 texttemplate="%{text}",
                 textfont=dict(family="IBM Plex Mono", size=11, color="white"),
                 showscale=True,
-                colorbar=dict(
-                    ticksuffix="%",
-                    tickfont=dict(family="IBM Plex Mono", color="#e6edf3"),
-                    bgcolor="#161b22",
-                    bordercolor="#30363d",
-                )
+                colorbar=dict(ticksuffix="%", tickfont=dict(family="IBM Plex Mono", color="#e6edf3"),
+                              bgcolor="#161b22", bordercolor="#30363d")
             ))
             fig_hm.update_layout(
                 paper_bgcolor="#161b22", plot_bgcolor="#161b22",
                 font=dict(family="IBM Plex Sans", color="#e6edf3"),
-                title=dict(text="Caste–Party Affinity Matrix (Base Scenario)", font=dict(family="Rajdhani", color="#79c0ff", size=15)),
+                title=dict(text="Caste–Party Affinity Matrix (Scenario)", font=dict(family="Rajdhani", color="#79c0ff", size=15)),
                 xaxis=dict(tickfont=dict(family="Rajdhani", size=13, color="#e6edf3"), side="top"),
                 yaxis=dict(tickfont=dict(family="IBM Plex Sans", size=10, color="#e6edf3"), autorange="reversed"),
                 margin=dict(t=60, l=0, r=0, b=0),
                 height=max(400, len(matrix_df) * 28 + 80),
             )
-            st.plotly_chart(fig_hm, width="stretch")
+            st.plotly_chart(fig_hm, width="stretch", key="tab4_heatmap")
 
-            # Dominant caste table
-            st.markdown('<div class="section-header">DOMINANT CASTES (>5% of AC) — KEY BATTLEGROUND</div>', unsafe_allow_html=True)
+            # Dominant castes
+            st.markdown('<div class="section-header">DOMINANT CASTES (>5% of AC) — SCENARIO LEANINGS</div>', unsafe_allow_html=True)
             dominant = ac_df[ac_df["caste_pct"] >= 5].copy()
             if len(dominant) == 0:
                 dominant = ac_df.head(5)
@@ -1057,7 +937,7 @@ if raw_df is not None:
             for _, dr in dominant.iterrows():
                 caste = dr["Caste"]
                 cpct  = dr["caste_pct"]
-                sp    = caste_splits_base.get(caste, {})
+                sp    = st.session_state["active_splits"].get(caste, caste_splits_base.get(caste, {}))
                 top_p = max(sp, key=sp.get)
                 top_v = sp[top_p]
                 pc    = PARTY_COLORS.get(top_p, "#888")
@@ -1066,31 +946,46 @@ if raw_df is not None:
                     f'<span class="party-badge" style="background:{PARTY_COLORS.get(p,"#888")}22;color:{PARTY_COLORS.get(p,"#888")};border:1px solid {PARTY_COLORS.get(p,"#888")}44">{p}: {sp.get(p,0):.0f}%</span>'
                     for p in PARTIES if sp.get(p, 0) > 5
                 ])
-                est_votes_str = f"{int(dr.get('caste_pct', 0) * total_electors / 100):,}" if total_electors else "—"
+                est_str = f"{int(cpct * total_electors / 100):,}" if total_electors else "—"
 
                 st.markdown(f"""
                 <div class="impact-bar-wrap" style="border-left:4px solid {pc}">
                   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
                     <span style="font-family:Rajdhani;font-size:1.1rem;font-weight:700;color:#e6edf3">{caste}</span>
-                    <span style="font-family:IBM Plex Mono;font-size:0.75rem;color:#8b949e">{cpct:.1f}% of AC · ~{est_votes_str} voters</span>
+                    <span style="font-family:IBM Plex Mono;font-size:0.75rem;color:#8b949e">{cpct:.1f}% of AC · ~{est_str} voters</span>
                   </div>
                   <div style="margin-bottom:4px">{badges}</div>
                   <div style="font-size:0.8rem;color:#8b949e">Leans: <span style="color:{pc};font-weight:600">{top_p} ({top_v:.0f}%)</span></div>
                 </div>""", unsafe_allow_html=True)
 
+            # Survey vs Scenario summary
+            st.markdown('<div class="section-header">SCENARIO vs SURVEY — FINAL SUMMARY</div>', unsafe_allow_html=True)
+            scenario_vs = compute_vote_share(ac_df, st.session_state["active_splits"])
+            final_cols = st.columns(len(PARTIES))
+            for i, p in enumerate(PARTIES):
+                sv = survey_norm.get(p, 0)
+                sc = scenario_vs.get(p, 0)
+                d  = sc - sv
+                dc = "delta-pos" if d > 0 else ("delta-neg" if d < 0 else "delta-neu")
+                with final_cols[i]:
+                    st.markdown(f"""
+                    <div class="metric-card" style="border-left:4px solid {PARTY_COLORS[p]}">
+                      <div class="metric-label">{p}</div>
+                      <div class="metric-value" style="color:{PARTY_COLORS[p]}">{sc:.1f}%</div>
+                      <div class="metric-delta {dc}">Survey: {sv:.1f}% | Δ {'+' if d>=0 else ''}{d:.1f}%</div>
+                    </div>""", unsafe_allow_html=True)
+
     else:
-        st.error("❌ Could not find required columns. Please ensure your CSV has: AC Name, Caste (Eng), and Caste % columns.")
+        st.error("❌ Could not find required columns (AC Name, Caste (Eng), Caste %).")
 
 else:
-    # Manual entry mode
     st.markdown('<div class="section-header">MANUAL CASTE ENTRY</div>', unsafe_allow_html=True)
-    st.markdown('<div class="info-box">Enter your constituency\'s caste data manually below.</div>', unsafe_allow_html=True)
-    st.info("Use the sidebar to switch to 'Use Sample Data' for a pre-loaded example.")
+    st.info("Use the sidebar to load data.")
 
-# ─── Footer ───────────────────────────────────────────────────────────────────
+# ─── Footer ──────────────────────────────────────────────────────────────────
 st.markdown("""
 <div style="margin-top:40px;padding:16px 24px;background:#161b22;border:1px solid #30363d;border-radius:10px;
             font-family:'IBM Plex Mono';font-size:0.72rem;color:#8b949e;text-align:center">
-  AC Caste Vote Simulator · CT01 2026 UP AE CAPI R1 · Survey Analytics Platform · For internal use only
+  AC Caste Vote Simulator · CT01 2026 UP AE CAPI R1 · BJP+RLD Alliance Mode · Survey Analytics Platform
 </div>
 """, unsafe_allow_html=True)
