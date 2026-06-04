@@ -469,7 +469,8 @@ if raw_df is not None:
 
         total_electors = None
         if "Total Electors [29 May]" in raw_df.columns:
-            total_electors = pd.to_numeric(raw_df[raw_df[ac_col] == selected_ac]["Total Electors [29 May]"], errors="coerce").iloc[0]
+            _te = pd.to_numeric(raw_df[raw_df[ac_col] == selected_ac]["Total Electors [29 May]"], errors="coerce").iloc[0]
+            total_electors = int(_te) if pd.notna(_te) else None
 
         # ─── Build initial splits from default affinity ────────────────────
         caste_splits_base = {}
@@ -515,7 +516,7 @@ if raw_df is not None:
                 st.markdown(f"""
                 <div class="metric-card">
                   <div class="metric-label">Total Electors</div>
-                  <div class="metric-value">{int(total_electors):,}</div>
+                  <div class="metric-value">{total_electors:,}</div>
                   <div class="metric-delta delta-neu">As of 29 May</div>
                 </div>""" if total_electors else """<div class="metric-card"><div class="metric-label">Total Electors</div><div class="metric-value">—</div></div>""",
                 unsafe_allow_html=True)
@@ -572,7 +573,7 @@ if raw_df is not None:
                     textfont=dict(family="IBM Plex Sans", color="white"),
                     marker=dict(line=dict(width=2, color="#0d1117"))
                 )
-                st.plotly_chart(fig_tree, use_container_width=True)
+                st.plotly_chart(fig_tree, width="stretch")
 
             with col_table:
                 display_df = ac_df[["Caste", "Category", "caste_pct"]].copy()
@@ -580,7 +581,7 @@ if raw_df is not None:
                 display_df["Share %"] = display_df["Share %"].apply(lambda x: f"{x:.2f}%")
                 st.dataframe(
                     display_df,
-                    use_container_width=True,
+                    width="stretch",
                     hide_index=True,
                     height=380,
                 )
@@ -623,7 +624,7 @@ if raw_df is not None:
                 margin=dict(t=20, l=0, r=0, b=0),
                 height=280,
             )
-            st.plotly_chart(fig_bar, use_container_width=True)
+            st.plotly_chart(fig_bar, width="stretch")
 
         # ══════════════════════════════════════════════════════════════════
         # TAB 2 — SCENARIO BUILDER
@@ -695,7 +696,7 @@ if raw_df is not None:
                         yaxis=dict(range=[0, 110], showgrid=False, showticklabels=False),
                         xaxis=dict(showgrid=False, tickfont=dict(size=10, family="Rajdhani")),
                     )
-                    st.plotly_chart(mini_fig, use_container_width=True)
+                    st.plotly_chart(mini_fig, width="stretch")
 
             # ── Quick Swing Simulator ─────────────────────────────────────
             st.markdown('<div class="section-header">QUICK SWING SIMULATOR</div>', unsafe_allow_html=True)
@@ -783,7 +784,7 @@ if raw_df is not None:
                     margin=dict(t=40, l=20, r=20, b=20),
                     height=320,
                 )
-                st.plotly_chart(fig_radar, use_container_width=True)
+                st.plotly_chart(fig_radar, width="stretch")
             with col_rr:
                 # Delta waterfall
                 delta_data = {p: scenario_vs.get(p, 0) - base_vs.get(p, 0) for p in PARTIES}
@@ -806,7 +807,7 @@ if raw_df is not None:
                     margin=dict(t=40, l=0, r=0, b=0),
                     height=320,
                 )
-                st.plotly_chart(fig_delta, use_container_width=True)
+                st.plotly_chart(fig_delta, width="stretch")
 
         # ══════════════════════════════════════════════════════════════════
         # TAB 3 — IMPACT ANALYSIS
@@ -885,7 +886,7 @@ if raw_df is not None:
                 margin=dict(t=40, l=0, r=60, b=0),
                 height=380,
             )
-            st.plotly_chart(fig_tornado, use_container_width=True)
+            st.plotly_chart(fig_tornado, width="stretch")
 
             # Caste contribution stacked chart
             st.markdown('<div class="section-header">CASTE CONTRIBUTION TO EACH PARTY</div>', unsafe_allow_html=True)
@@ -914,7 +915,7 @@ if raw_df is not None:
                 margin=dict(t=40, l=0, r=0, b=80),
                 height=380,
             )
-            st.plotly_chart(contrib_fig, use_container_width=True)
+            st.plotly_chart(contrib_fig, width="stretch")
 
         # ══════════════════════════════════════════════════════════════════
         # TAB 4 — CASTE-PARTY MATRIX
@@ -960,7 +961,7 @@ if raw_df is not None:
                 margin=dict(t=60, l=0, r=0, b=0),
                 height=max(400, len(matrix_df) * 28 + 80),
             )
-            st.plotly_chart(fig_hm, use_container_width=True)
+            st.plotly_chart(fig_hm, width="stretch")
 
             # Dominant caste table
             st.markdown('<div class="section-header">DOMINANT CASTES (>5% of AC) — KEY BATTLEGROUND</div>', unsafe_allow_html=True)
@@ -980,13 +981,13 @@ if raw_df is not None:
                     f'<span class="party-badge" style="background:{PARTY_COLORS.get(p,"#888")}22;color:{PARTY_COLORS.get(p,"#888")};border:1px solid {PARTY_COLORS.get(p,"#888")}44">{p}: {sp.get(p,0):.0f}%</span>'
                     for p in PARTIES if sp.get(p, 0) > 5
                 ])
-                est_votes = int(dr.get("caste_pct", 0) * (total_electors or 100000) / 100) if total_electors else "—"
+                est_votes_str = f"{int(dr.get('caste_pct', 0) * total_electors / 100):,}" if total_electors else "—"
 
                 st.markdown(f"""
                 <div class="impact-bar-wrap" style="border-left:4px solid {pc}">
                   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
                     <span style="font-family:Rajdhani;font-size:1.1rem;font-weight:700;color:#e6edf3">{caste}</span>
-                    <span style="font-family:IBM Plex Mono;font-size:0.75rem;color:#8b949e">{cpct:.1f}% of AC · ~{est_votes:,} voters</span>
+                    <span style="font-family:IBM Plex Mono;font-size:0.75rem;color:#8b949e">{cpct:.1f}% of AC · ~{est_votes_str} voters</span>
                   </div>
                   <div style="margin-bottom:4px">{badges}</div>
                   <div style="font-size:0.8rem;color:#8b949e">Leans: <span style="color:{pc};font-weight:600">{top_p} ({top_v:.0f}%)</span></div>
