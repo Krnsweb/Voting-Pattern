@@ -340,63 +340,160 @@ def caste_impact_score(caste_pct: float, split_before: dict, split_after: dict, 
     delta = split_after.get(party, 0) - split_before.get(party, 0)
     return (caste_pct / 100) * delta
 
-# ─── Sidebar ──────────────────────────────────────────────────────────────────
-with st.sidebar:
-    st.markdown('<div class="section-header">DATA SOURCE</div>', unsafe_allow_html=True)
-
-    # GOOGLE SHEET BACKEND
+    # ─── GOOGLE SHEET BACKEND ─────────────────────────────────────────────
 
 GOOGLE_SHEET_URL = st.secrets.get(
-    "GOOGLE_SHEET_URL",
-    "https://docs.google.com/spreadsheets/d/e/2PACX-1vSonf79A9F3Ezu86qSskR5ed0pdVxZvIgQ6ymaN2omhWALmH-SfoNwUQ3CPLSK4xTOrRAU64TXG8wLj/pub?output=csv"
+    "https://docs.google.com/spreadsheets/d/e/2PACX-1vSonf79A9F3Ezu86qSskR5ed0pdVxZvIgQ6ymaN2omhWALmH-SfoNwUQ3CPLSK4xTOrRAU64TXG8wLj/pub?output=csv",
+    ""
 )
 
 @st.cache_data(ttl=300)
-def load_master_data():
+def load_master_sheet():
     df = pd.read_csv(GOOGLE_SHEET_URL)
 
     df.columns = [c.strip() for c in df.columns]
 
     return df
 
-try:
-    raw_df = load_master_data()
+# ─── Sidebar ──────────────────────────────────────────────────────────
 
-    st.success(
-        f"✅ Loaded {len(raw_df):,} caste records from Google Sheet"
-    )
+with st.sidebar:
 
-except Exception as e:
-
-    st.error(
-        f"Google Sheet Load Failed: {e}"
-    )
     st.markdown(
-    '<div class="section-header">CONSTITUENCY SELECTION</div>',
-    unsafe_allow_html=True
-)
+        '<div class="section-header">CONSTITUENCY SELECTION</div>',
+        unsafe_allow_html=True
+    )
 
-districts = sorted(
-    raw_df["District"].dropna().unique()
-)
+    if not GOOGLE_SHEET_URL:
 
-selected_district = st.selectbox(
-    "Select District",
-    districts
-)
+        st.error(
+            "GOOGLE_SHEET_URL missing in Streamlit secrets."
+        )
 
-acs = sorted(
-    raw_df[
-        raw_df["District"] == selected_district
-    ]["AC Name"].dropna().unique()
-)
+        st.stop()
 
-selected_ac = st.selectbox(
-    "Select Assembly Constituency",
-    acs
-)
+    try:
 
-ac_df = raw_df[raw_df["AC Name"] == selected_ac].copy()
+        raw_df = load_master_sheet()
+
+        st.success(
+            f"Loaded {len(raw_df):,} caste records"
+        )
+
+    except Exception as e:
+
+        st.error(
+            f"Google Sheet Load Failed: {e}"
+        )
+
+        st.stop()
+
+    districts = sorted(
+        raw_df["District"]
+        .dropna()
+        .unique()
+    )
+
+    selected_district = st.selectbox(
+        "District",
+        districts
+    )
+
+    acs = sorted(
+        raw_df[
+            raw_df["District"] == selected_district
+        ]["AC Name"]
+        .dropna()
+        .unique()
+    )
+
+    selected_ac = st.selectbox(
+        "Assembly Constituency",
+        acs
+    )
+
+    st.markdown(
+        '<div class="section-header">SURVEY INPUTS</div>',
+        unsafe_allow_html=True
+    )
+
+    survey_bjp = st.number_input(
+        "BJP+ Survey Vote %",
+        0.0,
+        100.0,
+        44.0
+    )
+
+    survey_sp = st.number_input(
+        "SP+INC Survey Vote %",
+        0.0,
+        100.0,
+        38.0
+    )
+
+    survey_bsp = st.number_input(
+        "BSP Survey Vote %",
+        0.0,
+        100.0,
+        12.0
+    )
+
+    survey_rld = st.number_input(
+        "RLD Survey Vote %",
+        0.0,
+        100.0,
+        4.0
+    )
+
+    survey_others = st.number_input(
+        "Others Survey Vote %",
+        0.0,
+        100.0,
+        2.0
+    )
+
+    st.markdown(
+        '<div class="section-header">TURNOUT</div>',
+        unsafe_allow_html=True
+    )
+
+    muslim_turnout = st.slider(
+        "Muslim Turnout %",
+        50,
+        100,
+        100
+    )
+
+    obc_turnout = st.slider(
+        "OBC Turnout %",
+        50,
+        100,
+        100
+    )
+
+    sc_turnout = st.slider(
+        "SC Turnout %",
+        50,
+        100,
+        100
+    )
+
+    gen_turnout = st.slider(
+        "GEN Turnout %",
+        50,
+        100,
+        100
+    )
+
+    refresh = st.button(
+        "🔄 Refresh Data"
+    )
+
+    if refresh:
+
+        st.cache_data.clear()
+
+        st.rerun()
 
     st.markdown('<div class="section-header">SURVEY INPUTS</div>', unsafe_allow_html=True)
     survey_bjp    = st.number_input("BJP+ Survey Vote %",    min_value=0.0, max_value=100.0, value=44.0, step=0.5, format="%.1f")
