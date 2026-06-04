@@ -454,6 +454,10 @@ if raw_df is not None:
         ac_df = ac_df[ac_df["caste_pct"] > 0].copy()
         ac_df = ac_df.sort_values("caste_pct", ascending=False).reset_index(drop=True)
 
+        if ac_df.empty:
+            st.warning("⚠️ No caste data found for this AC. Please select another constituency.")
+            st.stop()
+
         # Apply turnout adjustment if enabled
         if apply_turnout and turnout_map and "Category" in ac_df.columns:
             def get_turnout(row):
