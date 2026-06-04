@@ -425,23 +425,23 @@ if raw_df is not None:
     raw_df.columns = [c.strip() for c in raw_df.columns]
     # Find caste% column (flexible naming)
     pct_col = next((c for c in raw_df.columns if "caste %" in c.lower() or "caste%" in c.lower()), None)
-    caste_col = next((c for c in raw_df.columns if "caste (eng)" in c.lower() or (c.lower() == "caste" and "local" not in c.lower())), None)
+    caste_col = next((c for c in raw_df.columns if "caste (eng)" in c.lower()), None)
+    if caste_col is None:
+        caste_col = next((c for c in raw_df.columns if c.lower() == "caste" and "local" not in c.lower()), None)
     ac_col  = next((c for c in raw_df.columns if "ac name" in c.lower()), None)
     cat_col = next((c for c in raw_df.columns if "category" in c.lower()), None)
 
     if pct_col and caste_col and ac_col:
-        raw_df["caste_pct"] = pd.to_numeric(raw_df[pct_col], errors="coerce").fillna(0)
+        raw_df["caste_pct"] = pd.to_numeric(
+            raw_df[pct_col].astype(str).str.replace('%', '', regex=False).str.strip(),
+            errors="coerce"
+        ).fillna(0)
         raw_df["Caste"]     = raw_df[caste_col].astype(str).str.strip()
 
-        ac_list = sorted(raw_df[ac_col].unique().tolist())
-
-        col_ac, col_zone = st.columns([3, 2])
-        with col_ac:
-            selected_ac = st.selectbox("🏛️ Select Assembly Constituency (AC)", ac_list, index=0)
-        with col_zone:
-            if "AC Zone" in raw_df.columns:
-                zone_info = raw_df[raw_df[ac_col] == selected_ac]["AC Zone"].iloc[0] if len(raw_df[raw_df[ac_col] == selected_ac]) > 0 else "—"
-                st.metric("Zone", zone_info)
+        if "AC Zone" in raw_df.columns:
+            zone_rows = raw_df[raw_df[ac_col] == selected_ac]
+            if len(zone_rows) > 0:
+                st.metric("Zone", zone_rows["AC Zone"].iloc[0])
 
         ac_df = raw_df[raw_df[ac_col] == selected_ac].copy()
         # Add category if available
@@ -455,7 +455,7 @@ if raw_df is not None:
         ac_df = ac_df.sort_values("caste_pct", ascending=False).reset_index(drop=True)
 
         if ac_df.empty:
-            st.warning("⚠️ No caste data found for this AC. Please select another constituency.")
+            st.warning(f"⚠️ No caste data with non-zero population found for **{selected_ac}**. Try another constituency.")
             st.stop()
 
         # Apply turnout adjustment if enabled
