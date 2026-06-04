@@ -495,6 +495,30 @@ with st.sidebar:
 
         st.rerun()
 
+    ac_df = raw_df[
+    raw_df["AC Name"] == selected_ac
+].copy()
+
+ac_df["caste_pct"] = pd.to_numeric(
+    ac_df["Caste % [29 May]"],
+    errors="coerce"
+).fillna(0)
+
+ac_df["Caste"] = (
+    ac_df["Caste (Eng)"]
+    .astype(str)
+    .str.strip()
+)
+
+ac_df = ac_df[
+    ac_df["caste_pct"] > 0
+]
+
+ac_df = ac_df.sort_values(
+    "caste_pct",
+    ascending=False
+)
+
     st.markdown('<div class="section-header">SURVEY INPUTS</div>', unsafe_allow_html=True)
     survey_bjp    = st.number_input("BJP+ Survey Vote %",    min_value=0.0, max_value=100.0, value=44.0, step=0.5, format="%.1f")
     survey_sp     = st.number_input("SP+INC Survey Vote %",  min_value=0.0, max_value=100.0, value=38.0, step=0.5, format="%.1f")
