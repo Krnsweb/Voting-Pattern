@@ -837,53 +837,33 @@ if raw_df is not None:
                     st.plotly_chart(mini_fig, use_container_width=True)
 
             # ── Result comparison ─────────────────────────────────────────
-            st.markdown(
-    '<div class="section-header">QUICK SWING SIMULATOR</div>',
-    unsafe_allow_html=True
-)
+                   st.markdown('<div class="section-header">QUICK SWING SIMULATOR</div>',unsafe_allow_html=True)
 
-swing_caste = st.selectbox(
-    "Caste",
-    filtered_df["Caste"].tolist()
-)
+                   swing_caste = st.selectbox("Caste",filtered_df["Caste"].tolist())
+                   from_party = st.selectbox("From Party",PARTIES)
+                   to_party = st.selectbox("To Party",PARTIES,index=1)
+                   swing_pct = st.slider("Vote Shift %",0,20,5)
 
-from_party = st.selectbox(
-    "From Party",
-    PARTIES
-)
+                   if st.button("Apply Swing"):
 
-to_party = st.selectbox(
-    "To Party",
-    PARTIES,
-    index=1
-)
+                       split = st.session_state["modified_splits"][swing_caste]
 
-swing_pct = st.slider(
-    "Vote Shift %",
-    0,
-    20,
-    5
-)
+                       split[from_party] = max(
+                        0,
+                        split[from_party] - swing_pct
+                        )
 
-if st.button("Apply Swing"):
+                        split[to_party] += swing_pct
 
-    split = st.session_state["modified_splits"][swing_caste]
+                        split = normalize_split(split)
 
-    split[from_party] = max(
-        0,
-        split[from_party] - swing_pct
-    )
+                        st.session_state["modified_splits"][swing_caste] = split
 
-    split[to_party] += swing_pct
-
-    split = normalize_split(split)
-
-    st.session_state["modified_splits"][swing_caste] = split
-
-    st.success(
-        f"{swing_pct}% shifted "
-        f"{from_party} → {to_party}"
-    )
+                        st.success(
+                        f"{swing_pct}% shifted "
+                        f"{from_party} → {to_party}")
+            
+            
             scenario_vs = compute_vote_share(ac_df, scenario_splits)
 
             st.markdown('<div class="section-header">SCENARIO RESULT vs BASE</div>', unsafe_allow_html=True)
