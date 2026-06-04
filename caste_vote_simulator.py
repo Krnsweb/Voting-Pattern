@@ -1194,7 +1194,7 @@ if raw_df is not None:
                     column_config=col_cfg,
                     disabled=["Caste", "Pop %", "Total"],
                     column_order=["Caste", "Pop %"] + PARTIES + ["Total"],
-                    height=min(40 + len(caste_list) * 35, 520),
+                    height=min(40 + len(caste_list) * 35, 700),
                 )
  
                 # Recompute Total column live for visual feedback
@@ -1242,17 +1242,19 @@ if raw_df is not None:
  
                 return new_splits
  
-            # ── render the three tables ───────────────────────────────────
-            col_v22, col_cap, col_bst = st.columns(3)
-            with col_v22:
-                vs22_splits = render_editor("vs22", "🗳️ VS 2022",   "#1f6feb",
-                                            "Actual 2022 VS result splits", persistent=True)
-            with col_cap:
-                capi_splits = render_editor("capi", "📋 CAPI Survey", "#e3b341",
-                                            "Field survey (CAPI) measured splits", persistent=True)
-            with col_bst:
-                best_splits = render_editor("best", "🚀 Best Case",  "#56d364",
-                                            "Target / planning scenario — not saved", persistent=False)
+            # ── render the three tables — full width, one below another ──
+            vs22_splits = render_editor("vs22", "🗳️ VS 2022",   "#1f6feb",
+                                        "Actual 2022 VS result splits", persistent=True)
+
+            st.markdown("<hr style='border-color:#30363d;margin:20px 0'>", unsafe_allow_html=True)
+
+            capi_splits = render_editor("capi", "📋 CAPI Survey", "#e3b341",
+                                        "Field survey (CAPI) measured splits", persistent=True)
+
+            st.markdown("<hr style='border-color:#30363d;margin:20px 0'>", unsafe_allow_html=True)
+
+            best_splits = render_editor("best", "🚀 Best Case",  "#56d364",
+                                        "Target / planning scenario — not saved", persistent=False)
  
             # ── compute vote shares from the three tables ─────────────────
             def vs_from_splits(splits):
